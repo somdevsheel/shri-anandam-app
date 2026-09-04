@@ -54,7 +54,7 @@ export interface OrderStatusHistoryEntry {
 export interface OrderNote {
   id: string;
   orderId: string;
-  staffId: string;
+  authorStaffId: string;
   note: string;
   createdAt: string;
 }
@@ -64,7 +64,10 @@ export interface PaymentTransaction {
   paymentId: string;
   type: string;
   amountInPaise: Paise;
-  status: string;
+  collectedByStaffId: string | null;
+  referenceNumber: string | null;
+  notes: string | null;
+  occurredAt: string;
   createdAt: string;
 }
 
@@ -88,6 +91,8 @@ export interface OrderAddressSnapshot {
   city: string;
   state: string;
   pincode: string;
+  latitude: number | null;
+  longitude: number | null;
 }
 
 export interface Order {
