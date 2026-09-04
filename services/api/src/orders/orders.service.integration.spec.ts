@@ -7,6 +7,8 @@ import { OutboxService } from "../outbox/outbox.service";
 import { InventoryReservationService } from "../inventory/inventory-reservation.service";
 import { InventoryService } from "../inventory/inventory.service";
 import { CartService } from "../cart/cart.service";
+import { PaymentsService } from "../payments/payments.service";
+import { ManualPaymentProvider } from "../payments/providers/manual-payment.provider";
 import { OrdersService } from "./orders.service";
 import { OrderNumberService } from "./order-number.service";
 import { DeliveryFeeService } from "./delivery-fee.service";
@@ -29,12 +31,24 @@ describe("OrdersService (integration)", () => {
   const inventoryReservations = new InventoryReservationService(prisma as unknown as PrismaService, outbox);
   const inventory = new InventoryService(prisma as unknown as PrismaService, new AuditLogService(prisma as unknown as PrismaService), inventoryReservations);
   const cart = new CartService(prisma as unknown as PrismaService, inventory);
+  // Every order in this suite pays by COD (an offline method), which
+  // never calls into PaymentProvider at all (see ADR-015/017) — the
+  // no-op ManualPaymentProvider here is never actually exercised, only
+  // satisfies PaymentsService's constructor.
+  const payments = new PaymentsService(
+    prisma as unknown as PrismaService,
+    new AuditLogService(prisma as unknown as PrismaService),
+    outbox,
+    inventoryReservations,
+    new ManualPaymentProvider(),
+  );
   const orders = new OrdersService(
     prisma as unknown as PrismaService,
     new AuditLogService(prisma as unknown as PrismaService),
     outbox,
     inventoryReservations,
     cart,
+    payments,
     new OrderNumberService(),
     new DeliveryFeeService(prisma as unknown as PrismaService),
   );

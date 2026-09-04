@@ -7,7 +7,12 @@ import { Logger as PinoLogger } from "nestjs-pino";
 import { AppModule } from "./app.module";
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule, { bufferLogs: true });
+  // rawBody: true makes Nest's body parser stash the unparsed request
+  // bytes on `req.rawBody` alongside the normal parsed `req.body` — the
+  // Razorpay webhook handler needs those exact bytes to verify the HMAC
+  // signature (parsing and re-serializing JSON is not guaranteed to
+  // reproduce byte-identical output, which would break verification).
+  const app = await NestFactory.create(AppModule, { bufferLogs: true, rawBody: true });
   app.useLogger(app.get(PinoLogger));
 
   const config = app.get(ConfigService);

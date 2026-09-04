@@ -4,16 +4,18 @@ import {
   DomainEvent,
   ErrorCode,
   isValidOrderStatusTransition,
+  OFFLINE_PAYMENT_METHODS,
   OrderStatus,
   Permission,
 } from "@shri-anandam/shared-types";
-import { HttpStatus } from "@nestjs/common";
+import { HttpStatus, Logger } from "@nestjs/common";
 import { PrismaService } from "../database/prisma.service";
 import type { PrismaTransactionClient } from "../database/prisma.service";
 import { AuditLogService } from "../audit/audit-log.service";
 import { OutboxService } from "../outbox/outbox.service";
 import { InventoryReservationService } from "../inventory/inventory-reservation.service";
 import { CartService } from "../cart/cart.service";
+import { PaymentsService } from "../payments/payments.service";
 import { OrderNumberService } from "./order-number.service";
 import { DeliveryFeeService } from "./delivery-fee.service";
 import { AppError, ConflictError, ForbiddenError, NotFoundError, ValidationError } from "../common/errors/app.error";
@@ -67,12 +69,15 @@ const STATUS_PERMISSION: Record<OrderStatus, Permission | null> = {
 
 @Injectable()
 export class OrdersService {
+  private readonly logger = new Logger(OrdersService.name);
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly auditLog: AuditLogService,
     private readonly outbox: OutboxService,
     private readonly reservations: InventoryReservationService,
     private readonly cart: CartService,
+    private readonly payments: PaymentsService,
     private readonly orderNumbers: OrderNumberService,
     private readonly deliveryFee: DeliveryFeeService,
   ) {}
@@ -126,6 +131,15 @@ export class OrdersService {
     const taxInPaise = 0; // tax computation not implemented yet — see docs/architecture/decisions.md
     const totalInPaise = cartState.subtotalInPaise - discountInPaise + deliveryFeeInPaise + taxInPaise;
 
+    // Phase 7 (ADR-015/017): offline methods (COD/Pay-at-Store) have no
+    // async confirmation step, so stock is reserved AND consumed in this
+    // same transaction. Online methods (UPI/CARD/NET_BANKING) only
+    // reserve — consumption happens when the Razorpay webhook confirms
+    // payment (PaymentsService.handleWebhook), so a customer who never
+    // completes payment simply lets the reservation expire without ever
+    // having decremented real stock.
+    const isOfflinePayment = OFFLINE_PAYMENT_METHODS.has(dto.paymentMethod);
+
     try {
       const order = await this.prisma.$transaction(async (tx) => {
         const orderNumber = await this.orderNumbers.next(tx);
@@ -170,7 +184,7 @@ export class OrdersService {
             },
             payments: {
               create: {
-                provider: "MANUAL",
+                provider: isOfflinePayment ? "MANUAL" : "RAZORPAY",
                 method: dto.paymentMethod,
                 status: "PENDING",
                 amountInPaise: totalInPaise,
@@ -180,15 +194,11 @@ export class OrdersService {
           include: ORDER_DETAIL_INCLUDE,
         });
 
-        // Reserve + immediately consume stock for every inventory-tracked
-        // line, now that order.id exists to attribute the consumption
-        // to. COD/Pay-at-Store orders confirm immediately (no async
-        // payment-gateway step exists yet — that's Phase 7), so
-        // reserve-then-consume happens in this same transaction rather
-        // than staying held pending a webhook. If any line is actually
-        // out of stock, reserve() throws and the whole transaction —
-        // order, items, payment, everything above — rolls back
-        // together; nothing here is a partial commit. Untracked
+        // Reserve stock for every inventory-tracked line, now that
+        // order.id exists to attribute the hold to. If any line is
+        // actually out of stock, reserve() throws and the whole
+        // transaction — order, items, payment, everything above — rolls
+        // back together; nothing here is a partial commit. Untracked
         // variants (no InventoryItem row) are treated as unlimited,
         // matching CartService's own availability semantics.
         for (const item of order.items) {
@@ -202,7 +212,12 @@ export class OrdersService {
               quantity: item.quantity,
               orderId: order.id,
             });
-            await this.reservations.consume(tx, reservation.id, order.id);
+            // Offline methods confirm instantly, so the hold becomes a
+            // real sale immediately (see the isOfflinePayment comment
+            // above); online methods leave it ACTIVE for the webhook.
+            if (isOfflinePayment) {
+              await this.reservations.consume(tx, reservation.id, order.id);
+            }
           }
         }
 
@@ -250,6 +265,26 @@ export class OrdersService {
         // the client despite both existing in the DB by commit time.
         return tx.order.findUniqueOrThrow({ where: { id: order.id }, include: ORDER_DETAIL_INCLUDE });
       });
+
+      if (!isOfflinePayment) {
+        // Deliberately OUTSIDE the DB transaction above: an external
+        // HTTP call to Razorpay has no business holding row locks open
+        // for however long the network takes. If this fails, the order
+        // still exists with a PENDING payment lacking a providerOrderId
+        // — the client (or the customer retrying) can call
+        // POST /payments/:id/initiate to try again; it isn't stranded.
+        const payment = order.payments[0];
+        if (payment) {
+          try {
+            const initiated = await this.payments.initiatePayment(customer.id, payment.id);
+            order.payments[0] = { ...payment, providerOrderId: initiated.providerOrderId };
+          } catch (err) {
+            this.logger.warn(
+              `Order ${order.orderNumber} created but online payment initiation failed — customer can retry via POST /payments/:id/initiate: ${err instanceof Error ? err.message : err}`,
+            );
+          }
+        }
+      }
 
       return order;
     } catch (err) {

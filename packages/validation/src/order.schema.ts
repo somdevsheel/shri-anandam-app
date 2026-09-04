@@ -5,13 +5,19 @@ import { paginationQuerySchema, uuidSchema } from "./common.schema";
 const fulfillmentTypeSchema = z.enum(["DELIVERY", "PICKUP"]);
 
 /**
- * Payment method is restricted to offline methods for now — UPI/CARD/
- * NET_BANKING need a real payment gateway integration, which is Phase 7
- * (docs/architecture/payment-architecture.md). Accepting them here would
- * create an Order/Payment pair with no way to ever actually collect
- * payment, which is worse than not offering the option yet.
+ * Phase 7 adds the Razorpay-backed online methods alongside the offline
+ * ones Phase 6 shipped with — see docs/architecture/payment-architecture.md
+ * and ADR-015/ADR-017 in decisions.md for how OrdersService branches on
+ * this (reserve+consume immediately for offline, reserve-only pending a
+ * webhook for online).
  */
-const checkoutPaymentMethodSchema = z.enum([PaymentMethod.COD, PaymentMethod.PAY_AT_STORE]);
+const checkoutPaymentMethodSchema = z.enum([
+  PaymentMethod.COD,
+  PaymentMethod.PAY_AT_STORE,
+  PaymentMethod.UPI,
+  PaymentMethod.CARD,
+  PaymentMethod.NET_BANKING,
+]);
 
 export const createOrderSchema = z
   .object({
