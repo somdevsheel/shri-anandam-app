@@ -1,0 +1,38 @@
+{
+  "name": "@shri-anandam/notification-worker",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Outbox consumer -> FCM delivery (section 21). A separate deployable from services/api by design: order/payment creation must never block on, or fail because of, notification delivery. Talks to the SAME Postgres database as services/api via plain `pg` (not a generated Prisma client) — sharing Prisma's generated output across two independently-buildable/deployable services in a pnpm workspace is fragile (generation target resolution depends on which package's node_modules the command runs from); this worker only ever needs a handful of simple, hand-written queries, so the ORM convenience isn't worth that coupling.",
+  "main": "dist/main.js",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "start": "node dist/main.js",
+    "start:dev": "ts-node -r dotenv/config src/main.ts",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "lint": "eslint src --ext .ts",
+    "test": "jest"
+  },
+  "jest": {
+    "preset": "ts-jest",
+    "testEnvironment": "node",
+    "testMatch": ["**/*.spec.ts"],
+    "setupFiles": ["<rootDir>/test/load-env.js"]
+  },
+  "dependencies": {
+    "@shri-anandam/shared-types": "workspace:*",
+    "firebase-admin": "^14.3.0",
+    "pg": "^8.23.0",
+    "pino": "^9.4.0",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "@types/jest": "^29.5.14",
+    "@types/node": "^20.16.5",
+    "@types/pg": "^8.23.1",
+    "dotenv": "^16.4.5",
+    "jest": "^29.7.0",
+    "ts-jest": "^29.2.5",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.9.3"
+  }
+}

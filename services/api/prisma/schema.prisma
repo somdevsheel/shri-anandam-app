@@ -249,6 +249,7 @@ model Staff {
   stockAdjustments      StockAdjustment[]
   wastageEntries        Wastage[]
   productionBatches     ProductionBatch[]
+  notifications         Notification[]
 
   @@map("staff")
 }
@@ -328,8 +329,9 @@ model DeviceToken {
   lastActiveAt DateTime @default(now())
   createdAt    DateTime @default(now())
 
-  customer Customer? @relation(fields: [customerId], references: [id], onDelete: Cascade)
-  staff    Staff?    @relation(fields: [staffId], references: [id], onDelete: Cascade)
+  customer      Customer?      @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  staff         Staff?         @relation(fields: [staffId], references: [id], onDelete: Cascade)
+  notifications Notification[]
 
   @@index([customerId])
   @@index([staffId])
@@ -1098,25 +1100,35 @@ model Campaign {
 // =============================================================================
 
 model Notification {
-  id         String               @id @default(uuid())
-  customerId String?
-  staffId    String?
-  deviceId   String?
-  channel    NotificationChannel
-  category   NotificationCategory
-  type       String // e.g. "ORDER_PLACED", "NEW_ORDER"
-  title      String
-  body       String
-  entityType String?
-  entityId   String?
-  status     NotificationStatus   @default(PENDING)
-  sentAt     DateTime?
-  deliveredAt DateTime?
-  readAt     DateTime?
-  createdAt  DateTime             @default(now())
+  id            String               @id @default(uuid())
+  customerId    String?
+  staffId       String?
+  deviceId      String?
+  // Which outbox_events row this notification was raised for. Together
+  // with deviceId this is the idempotency key notification-worker upserts
+  // on, so a retried outbox event (FCM send failed, event re-claimed on
+  // the next poll) updates the same row instead of inserting a duplicate
+  // "NEW ORDER" for every retry attempt.
+  outboxEventId String?
+  channel       NotificationChannel
+  category      NotificationCategory
+  type          String // e.g. "ORDER_PLACED", "NEW_ORDER"
+  title         String
+  body          String
+  entityType    String?
+  entityId      String?
+  status        NotificationStatus   @default(PENDING)
+  sentAt        DateTime?
+  deliveredAt   DateTime?
+  readAt        DateTime?
+  createdAt     DateTime             @default(now())
 
-  customer Customer? @relation(fields: [customerId], references: [id])
+  customer    Customer?    @relation(fields: [customerId], references: [id])
+  staff       Staff?       @relation(fields: [staffId], references: [id])
+  device      DeviceToken? @relation(fields: [deviceId], references: [id])
+  outboxEvent OutboxEvent? @relation(fields: [outboxEventId], references: [id])
 
+  @@unique([outboxEventId, deviceId])
   @@index([customerId, status])
   @@index([staffId, status])
   @@index([createdAt])
@@ -1243,6 +1255,8 @@ model OutboxEvent {
   retryCount    Int          @default(0)
   publishedAt   DateTime?
   createdAt     DateTime     @default(now())
+
+  notifications Notification[]
 
   @@index([status, createdAt])
   @@map("outbox_events")
