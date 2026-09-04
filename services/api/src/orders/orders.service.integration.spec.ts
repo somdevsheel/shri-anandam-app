@@ -12,6 +12,7 @@ import { ManualPaymentProvider } from "../payments/providers/manual-payment.prov
 import { OrdersService } from "./orders.service";
 import { OrderNumberService } from "./order-number.service";
 import { DeliveryFeeService } from "./delivery-fee.service";
+import type { RealtimeGateway } from "../realtime/realtime.gateway";
 import type { AuthenticatedCustomer } from "../auth/types/authenticated-user.type";
 
 /**
@@ -42,6 +43,12 @@ describe("OrdersService (integration)", () => {
     inventoryReservations,
     new ManualPaymentProvider(),
   );
+  // A real RealtimeGateway needs a live JwtService/ConfigService and
+  // isn't what this suite is testing (it verifies OrdersService's own
+  // logic, not the WebSocket broadcast) — a minimal fake satisfying the
+  // two methods OrdersService actually calls is enough, same pattern as
+  // this file's `prisma as unknown as PrismaService` casts below.
+  const realtime = { emitOrderCreated: () => undefined, emitOrderUpdated: () => undefined } as unknown as RealtimeGateway;
   const orders = new OrdersService(
     prisma as unknown as PrismaService,
     new AuditLogService(prisma as unknown as PrismaService),
@@ -51,6 +58,7 @@ describe("OrdersService (integration)", () => {
     payments,
     new OrderNumberService(),
     new DeliveryFeeService(prisma as unknown as PrismaService),
+    realtime,
   );
 
   const suffix = randomUUID().slice(0, 8);

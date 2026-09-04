@@ -127,3 +127,71 @@ export interface Branch {
   address: string;
   isActive: boolean;
 }
+
+// ---------------------------------------------------------------------------
+// Orders (Phase 11 — checkout was previously a placeholder; see
+// app/checkout.tsx's git history)
+// ---------------------------------------------------------------------------
+
+export interface OrderItemAddon {
+  id: string;
+  addonNameSnapshot: string;
+  priceInPaiseSnapshot: Paise;
+}
+
+export interface OrderItem {
+  id: string;
+  productNameSnapshot: string;
+  variantNameSnapshot: string;
+  quantity: number;
+  unitPriceInPaise: Paise;
+  finalPriceInPaise: Paise;
+  specialInstructions: string | null;
+  addons: OrderItemAddon[];
+}
+
+export interface OrderStatusHistoryEntry {
+  id: string;
+  previousStatus: string | null;
+  newStatus: string;
+  actorType: "CUSTOMER" | "STAFF" | "SYSTEM";
+  reason: string | null;
+  createdAt: string;
+}
+
+export interface OrderPayment {
+  id: string;
+  provider: string;
+  method: string;
+  status: string;
+  amountInPaise: Paise;
+}
+
+export interface OrderAddressSnapshot {
+  contactName: string;
+  contactPhone: string;
+  line1: string;
+  line2: string | null;
+  city: string;
+  state: string;
+  pincode: string;
+}
+
+export interface Order {
+  id: string;
+  orderNumber: string;
+  status: string;
+  paymentStatus: string;
+  fulfillmentType: "DELIVERY" | "PICKUP";
+  subtotalInPaise: Paise;
+  discountInPaise: Paise;
+  deliveryFeeInPaise: Paise;
+  taxInPaise: Paise;
+  totalInPaise: Paise;
+  placedAt: string;
+  branch: { id: string; name: string; code: string; address: string };
+  items: OrderItem[];
+  addressSnapshot: OrderAddressSnapshot | null;
+  statusHistory: OrderStatusHistoryEntry[];
+  payments: OrderPayment[];
+}

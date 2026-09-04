@@ -41,6 +41,7 @@ export default function RootLayout() {
           <Stack.Screen name="(auth)" />
           <Stack.Screen name="product/[slug]" options={{ headerShown: true, title: "" }} />
           <Stack.Screen name="checkout" options={{ headerShown: true, title: "Checkout" }} />
+          <Stack.Screen name="order/[id]" options={{ headerShown: true, title: "Order" }} />
           <Stack.Screen name="category/[slug]" options={{ headerShown: true }} />
           <Stack.Screen name="addresses/index" options={{ headerShown: true, title: "Your addresses" }} />
           <Stack.Screen

@@ -17,6 +17,7 @@
     "next": "16.3.4",
     "react": "19.2.8",
     "react-dom": "19.2.8",
+    "socket.io-client": "^4.8.3",
     "zod": "^3.23.8",
     "zustand": "^5.0.15"
   },
@@ -37,7 +38,10 @@
   "jest": {
     "preset": "ts-jest",
     "testEnvironment": "jsdom",
-    "testMatch": ["**/*.spec.ts", "**/*.spec.tsx"]
+    "testMatch": [
+      "**/*.spec.ts",
+      "**/*.spec.tsx"
+    ]
   },
   "packageManager": "pnpm@9.15.9"
 }

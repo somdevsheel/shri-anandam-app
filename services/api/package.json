@@ -23,14 +23,24 @@
     "seed": "ts-node --project prisma/tsconfig.seed.json prisma/seed.ts"
   },
   "jest": {
-    "moduleFileExtensions": ["js", "json", "ts"],
+    "moduleFileExtensions": [
+      "js",
+      "json",
+      "ts"
+    ],
     "rootDir": "src",
     "testRegex": ".*\\.spec\\.ts$",
-    "transform": { "^.+\\.ts$": "ts-jest" },
-    "collectCoverageFrom": ["**/*.(t|j)s"],
+    "transform": {
+      "^.+\\.ts$": "ts-jest"
+    },
+    "collectCoverageFrom": [
+      "**/*.(t|j)s"
+    ],
     "coverageDirectory": "../coverage",
     "testEnvironment": "node",
-    "setupFiles": ["<rootDir>/../test/load-env.js"],
+    "setupFiles": [
+      "<rootDir>/../test/load-env.js"
+    ],
     "moduleNameMapper": {
       "^@shri-anandam/shared-types$": "<rootDir>/../../../packages/shared-types/src",
       "^@shri-anandam/validation$": "<rootDir>/../../../packages/validation/src",
@@ -38,19 +48,22 @@
     }
   },
   "dependencies": {
-    "@shri-anandam/config": "workspace:*",
-    "@shri-anandam/shared-types": "workspace:*",
-    "@shri-anandam/validation": "workspace:*",
     "@nestjs/common": "^10.4.4",
-    "@nestjs/core": "^10.4.4",
     "@nestjs/config": "^3.2.3",
+    "@nestjs/core": "^10.4.4",
     "@nestjs/jwt": "^10.2.0",
     "@nestjs/passport": "^10.0.3",
     "@nestjs/platform-express": "^10.4.4",
+    "@nestjs/platform-socket.io": "^10.4.22",
     "@nestjs/schedule": "^4.1.1",
     "@nestjs/terminus": "^10.2.3",
     "@nestjs/throttler": "^6.2.1",
+    "@nestjs/websockets": "^10.4.22",
     "@prisma/client": "^5.19.1",
+    "@shri-anandam/config": "workspace:*",
+    "@shri-anandam/shared-types": "workspace:*",
+    "@shri-anandam/validation": "workspace:*",
+    "@socket.io/redis-adapter": "^8.3.0",
     "argon2": "^0.41.1",
     "helmet": "^7.1.0",
     "ioredis": "^5.4.1",
@@ -60,6 +73,7 @@
     "pino-http": "^10.3.0",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.1",
+    "socket.io": "^4.8.3",
     "uuid": "^10.0.0",
     "zod": "^3.23.8"
   },

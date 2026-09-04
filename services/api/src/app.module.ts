@@ -28,6 +28,7 @@ import { OrdersModule } from "./orders/orders.module";
 import { PaymentsModule } from "./payments/payments.module";
 import { DevicesModule } from "./devices/devices.module";
 import { NotificationsModule } from "./notifications/notifications.module";
+import { RealtimeModule } from "./realtime/realtime.module";
 
 import { RequestIdMiddleware } from "./common/middleware/request-id.middleware";
 import { GlobalExceptionFilter } from "./common/filters/http-exception.filter";
@@ -73,6 +74,7 @@ import { PermissionsGuard } from "./common/guards/permissions.guard";
     PaymentsModule,
     DevicesModule,
     NotificationsModule,
+    RealtimeModule,
     // Delivery, Coupons, and Reviews modules are added in their
     // respective implementation phases (see docs/architecture).
   ],

@@ -177,6 +177,16 @@ brief for the full phase list):
   polling until Phase 11's WebSocket layer replaces it. See ADR-022,
   including a real `sortOrder`-ignored bug this screen's requirements
   surfaced in `OrdersService.listAdmin()`.
+- **Phase 11 — Realtime**: a Socket.IO gateway (Redis-adapter-backed for
+  multi-replica fan-out) broadcasting order create/update events to
+  customer-mobile, admin-web, and kitchen-web, each still keeping its
+  poll/fetch as the actual source of truth. See ADR-023, including a
+  live-testing-caught authorization bug (a per-branch room design
+  silently excluded the bootstrap OWNER account, which has no branch
+  assignment) and the real prerequisite this phase needed:
+  customer-mobile's checkout screen was still Phase 5's placeholder —
+  "live status updates for customers" had nothing to attach to without
+  a real checkout + order-tracking flow, so both were built here too.
 
-Delivery, coupons, reviews, realtime (WebSockets), and production
-hardening are built out phase by phase from here.
+Delivery, coupons, reviews, and production hardening are built out
+phase by phase from here.

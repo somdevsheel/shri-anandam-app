@@ -20,6 +20,8 @@ interface RequestOptions {
   method?: "GET" | "POST" | "PATCH" | "DELETE";
   body?: unknown;
   query?: Record<string, string | number | boolean | undefined>;
+  /** e.g. Idempotency-Key for checkout (services/api/src/orders reads it as a header, not a body field). */
+  headers?: Record<string, string>;
   /** Skip attaching the Authorization header — for the OTP/login endpoints themselves. */
   skipAuth?: boolean;
   /** Internal — prevents the 401-refresh-retry from recursing past one attempt. */
@@ -70,7 +72,7 @@ async function doRefresh(): Promise<boolean> {
 }
 
 export async function apiRequest<T>(path: string, options: RequestOptions = {}): Promise<T> {
-  const { method = "GET", body, query, skipAuth, isRetry } = options;
+  const { method = "GET", body, query, headers: extraHeaders, skipAuth, isRetry } = options;
 
   const url = new URL(`${API_URL}${path}`);
   if (query) {
@@ -79,7 +81,7 @@ export async function apiRequest<T>(path: string, options: RequestOptions = {}):
     }
   }
 
-  const headers: Record<string, string> = { "Content-Type": "application/json" };
+  const headers: Record<string, string> = { "Content-Type": "application/json", ...extraHeaders };
   if (!skipAuth) {
     const { accessToken } = useAuthStore.getState();
     if (accessToken) headers.Authorization = `Bearer ${accessToken}`;

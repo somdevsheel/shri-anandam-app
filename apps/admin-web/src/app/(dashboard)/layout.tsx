@@ -3,6 +3,7 @@
 import { useEffect, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { useAuthStore } from "@/lib/auth-store";
+import { useRealtimeOrders } from "@/lib/hooks/use-realtime";
 import { Sidebar } from "@/components/Sidebar";
 import { LoadingBlock } from "@/components/ui/Feedback";
 
@@ -19,6 +20,10 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
   const router = useRouter();
   const isHydrated = useAuthStore((s) => s.isHydrated);
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
+
+  // One connection shared across every screen under this layout — see
+  // ADR-023 for why this lives here rather than per-page.
+  useRealtimeOrders();
 
   useEffect(() => {
     void useAuthStore.getState().hydrate();

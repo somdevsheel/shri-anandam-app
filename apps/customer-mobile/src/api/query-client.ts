@@ -27,4 +27,6 @@ export const queryKeys = {
   cart: ["cart"] as const,
   profile: ["profile"] as const,
   addresses: ["addresses"] as const,
+  orders: (params: Record<string, unknown>) => ["orders", params] as const,
+  order: (id: string) => ["order", id] as const,
 };

@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import { OrderStatus } from "@shri-anandam/shared-types";
 import { useQueue } from "@/lib/hooks/use-orders";
 import { useNewOrderAlert } from "@/lib/hooks/use-new-order-alert";
+import { useRealtimeOrders } from "@/lib/hooks/use-realtime";
 import { OrderCard } from "@/components/OrderCard";
 import { EmptyState, ErrorBlock, LoadingBlock } from "@/components/ui/Feedback";
 
@@ -20,7 +21,8 @@ export default function QueuePage() {
   const [filter, setFilter] = useState<Filter>("ACTIVE");
   const { data: activeOrders, isLoading, error } = useQueue();
 
-  useNewOrderAlert(activeOrders);
+  const playNewOrderSound = useNewOrderAlert();
+  useRealtimeOrders(playNewOrderSound);
 
   const visibleOrders = useMemo(
     () => (!activeOrders ? [] : filter === "ACTIVE" ? activeOrders : activeOrders.filter((o) => o.status === filter)),

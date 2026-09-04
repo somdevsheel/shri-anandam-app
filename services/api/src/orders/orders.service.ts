@@ -18,6 +18,7 @@ import { CartService } from "../cart/cart.service";
 import { PaymentsService } from "../payments/payments.service";
 import { OrderNumberService } from "./order-number.service";
 import { DeliveryFeeService } from "./delivery-fee.service";
+import { RealtimeGateway } from "../realtime/realtime.gateway";
 import { AppError, ConflictError, ForbiddenError, NotFoundError, ValidationError } from "../common/errors/app.error";
 import { paginate } from "../common/util/paginate";
 import type { AuthenticatedCustomer, AuthenticatedStaff } from "../auth/types/authenticated-user.type";
@@ -84,6 +85,7 @@ export class OrdersService {
     private readonly payments: PaymentsService,
     private readonly orderNumbers: OrderNumberService,
     private readonly deliveryFee: DeliveryFeeService,
+    private readonly realtime: RealtimeGateway,
   ) {}
 
   // ---------------------------------------------------------------------
@@ -270,6 +272,15 @@ export class OrdersService {
         return tx.order.findUniqueOrThrow({ where: { id: order.id }, include: ORDER_DETAIL_INCLUDE });
       });
 
+      // Outside the transaction — see the identical note in transition().
+      this.realtime.emitOrderCreated({
+        id: order.id,
+        branchId: order.branchId,
+        orderNumber: order.orderNumber,
+        totalInPaise: order.totalInPaise,
+        status: order.status,
+      });
+
       if (!isOfflinePayment) {
         // Deliberately OUTSIDE the DB transaction above: an external
         // HTTP call to Razorpay has no business holding row locks open
@@ -398,7 +409,7 @@ export class OrdersService {
       );
     }
 
-    return this.prisma.$transaction(async (tx) => {
+    const updated = await this.prisma.$transaction(async (tx) => {
       await tx.order.update({ where: { id: order.id }, data: { status: newStatus } });
 
       await tx.orderStatusHistory.create({
@@ -442,6 +453,21 @@ export class OrdersService {
       // createOrder().
       return tx.order.findUniqueOrThrow({ where: { id: order.id }, include: ORDER_DETAIL_INCLUDE });
     });
+
+    // Outside the transaction (same "no external/variable-latency call
+    // inside a DB transaction" rule as the outbox pattern and ADR-017's
+    // Razorpay call) — a socket.io broadcast is in-process, not a
+    // network call, but can still block on backpressure, so it's kept
+    // off the transaction's critical path regardless.
+    this.realtime.emitOrderUpdated({
+      id: updated.id,
+      branchId: updated.branchId,
+      customerId: updated.customerId,
+      orderNumber: updated.orderNumber,
+      status: updated.status,
+    });
+
+    return updated;
   }
 
   /** Reverses every SALE-type stock consumption this order caused, restoring committed stock. */

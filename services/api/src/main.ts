@@ -5,6 +5,7 @@ import helmet from "helmet";
 import { Logger } from "@nestjs/common";
 import { Logger as PinoLogger } from "nestjs-pino";
 import { AppModule } from "./app.module";
+import { RedisIoAdapter } from "./realtime/redis-io.adapter";
 
 async function bootstrap() {
   // rawBody: true makes Nest's body parser stash the unparsed request
@@ -33,6 +34,13 @@ async function bootstrap() {
     exclude: ["health", "live", "ready"],
   });
   app.enableShutdownHooks();
+
+  // Phase 11 — Redis pub/sub fan-out so a WebSocket broadcast reaches
+  // clients connected to any replica, not just the one that handled the
+  // triggering request (see realtime/redis-io.adapter.ts).
+  const redisIoAdapter = new RedisIoAdapter(app);
+  await redisIoAdapter.connectToRedis(config.getOrThrow<string>("REDIS_URL"));
+  app.useWebSocketAdapter(redisIoAdapter);
 
   const port = config.get<number>("APP_PORT", 4000);
   await app.listen(port);
