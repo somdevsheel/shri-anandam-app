@@ -1,0 +1,47 @@
+## Dependencies
+node_modules/
+.pnpm-store/
+
+## Build output
+dist/
+build/
+out/
+.next/
+.turbo/
+*.tsbuildinfo
+
+## Env / secrets
+.env
+.env.*
+!.env.example
+
+## Logs
+*.log
+npm-debug.log*
+pnpm-debug.log*
+
+## Testing
+coverage/
+
+## Prisma
+services/api/prisma/*.db
+services/api/dist-seed/
+
+## Mobile (React Native)
+apps/*/android/app/build/
+apps/*/ios/build/
+apps/*/ios/Pods/
+apps/*/.expo/
+*.jks
+*.keystore
+!debug.keystore
+
+## OS / editor
+.DS_Store
+Thumbs.db
+.vscode/*
+!.vscode/extensions.json
+.idea/
+
+## Docker volumes captured locally
+infrastructure/docker/volumes/

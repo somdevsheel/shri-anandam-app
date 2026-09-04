@@ -1,0 +1,91 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  NODE_VERSION: "20"
+  PNPM_VERSION: "9.15.9"
+
+jobs:
+  lint-typecheck-test:
+    name: Lint, Typecheck, Unit Test
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: shri_anandam
+          POSTGRES_PASSWORD: changeme
+          POSTGRES_DB: shri_anandam_test
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U shri_anandam"
+          --health-interval 5s --health-timeout 5s --health-retries 10
+      redis:
+        image: redis:7-alpine
+        ports: ["6379:6379"]
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s --health-timeout 5s --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Lint
+        run: pnpm lint
+
+      - name: Typecheck
+        run: pnpm typecheck
+
+      - name: Generate Prisma client
+        run: pnpm prisma:generate
+
+      - name: Run database migrations (test DB)
+        run: pnpm --filter @shri-anandam/api prisma migrate deploy
+        env:
+          DATABASE_URL: postgresql://shri_anandam:changeme@localhost:5432/shri_anandam_test?schema=public
+
+      - name: Unit + integration tests
+        run: pnpm test
+        env:
+          DATABASE_URL: postgresql://shri_anandam:changeme@localhost:5432/shri_anandam_test?schema=public
+          REDIS_URL: redis://localhost:6379
+          JWT_ACCESS_SECRET: ci-test-access-secret
+          JWT_REFRESH_SECRET: ci-test-refresh-secret
+
+      - name: Security audit
+        run: pnpm audit --audit-level=high || true
+
+  build-docker:
+    name: Build Docker image
+    runs-on: ubuntu-latest
+    needs: lint-typecheck-test
+    if: github.event_name == 'push'
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build API image
+        run: docker build -f infrastructure/docker/api.Dockerfile -t shri-anandam-api:${{ github.sha }} .
+
+      # Push-to-registry and staging/production deploy steps are added once
+      # environment credentials and a registry are provisioned (see
+      # docs/architecture/deployment-architecture.md).

@@ -1,0 +1,29 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "commonjs",
+    "moduleResolution": "node",
+    "lib": ["ES2022"],
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "exactOptionalPropertyTypes": false,
+    "noImplicitOverride": true,
+    "noFallthroughCasesInSwitch": true,
+    "forceConsistentCasingInFileNames": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "resolveJsonModule": true,
+    "declaration": true,
+    "declarationMap": true,
+    "sourceMap": true,
+    "incremental": true,
+    "baseUrl": ".",
+    "paths": {
+      "@shri-anandam/shared-types": ["packages/shared-types/src"],
+      "@shri-anandam/validation": ["packages/validation/src"],
+      "@shri-anandam/config": ["packages/config/src"],
+      "@shri-anandam/api-client": ["packages/api-client/src"],
+      "@shri-anandam/utilities": ["packages/utilities/src"]
+    }
+  }
+}
