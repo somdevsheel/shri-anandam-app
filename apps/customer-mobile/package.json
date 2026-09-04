@@ -12,6 +12,7 @@
     "lint": "eslint app src --ext .ts,.tsx",
     "test": "jest",
     "prebuild": "expo prebuild",
+    "eas-build-post-install": "cd ../.. && pnpm -r --filter=./packages/* build",
     "build:android:preview": "eas build --platform android --profile preview",
     "build:android:production": "eas build --platform android --profile production"
   },
