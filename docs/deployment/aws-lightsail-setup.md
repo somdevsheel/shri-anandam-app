@@ -182,8 +182,16 @@ excludes it):
   e.g. `openssl rand -base64 32` run twice (must be different from
   each other)
 - `POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_DB`, `REDIS_PASSWORD`
-  — the new production-only vars (see `.env.example`'s comment);
-  generate strong values with `openssl rand -base64 24`
+  — the new production-only vars (see `.env.example`'s comment).
+  **Generate these alphanumeric-only** (e.g.
+  `tr -dc A-Za-z0-9 </dev/urandom | head -c 32`), not `openssl rand
+  -base64` — both values get embedded directly in a `postgresql://`/
+  `redis://` connection-string URL below, and base64's `+`, `/`, `=`
+  characters aren't all URL-safe. Caught live: `ioredis`'s strict
+  WHATWG `URL` parser rejected a base64 `REDIS_PASSWORD` outright
+  (`TypeError: Invalid URL`) the first time this was deployed —
+  Postgres's own URL parsing happened to tolerate it, which is worse,
+  not better, since it meant only Redis failed loudly.
 - `DATABASE_URL` — build it from the `POSTGRES_*` values above, using
   the **standard port 5432** (not the dev remap 55433):
   `postgresql://<POSTGRES_USER>:<POSTGRES_PASSWORD>@127.0.0.1:5432/<POSTGRES_DB>?schema=public`
@@ -217,14 +225,54 @@ pnpm install --frozen-lockfile
 pnpm --filter @shri-anandam/api prisma:generate
 pnpm --filter @shri-anandam/api prisma:deploy   # applies migrations — never `prisma migrate dev` in production
 
-# Build every app that needs building (services/notification-worker,
-# services/api, apps/admin-web, apps/kitchen-web all have a `build`
-# script — apps/customer-mobile and apps/owner-mobile don't deploy
-# here at all, they're native apps built separately via EAS)
+# The shared packages FIRST — services/api and both Next.js apps import
+# @shri-anandam/shared-types and @shri-anandam/validation, and those
+# packages need their own `dist/` built before anything that imports
+# them will typecheck. Skipping this produces "Cannot find module
+# '@shri-anandam/shared-types'" from services/api's build — caught live
+# deploying this exact doc, not hypothesized.
+pnpm -r --filter='./packages/*' build
+
+# Then every app that needs building (apps/customer-mobile and
+# apps/owner-mobile don't deploy here at all — they're native apps
+# built separately via EAS)
 pnpm --filter @shri-anandam/api build
 pnpm --filter @shri-anandam/notification-worker build
 pnpm --filter @shri-anandam/admin-web build
 pnpm --filter @shri-anandam/kitchen-web build
+```
+
+**Before building `admin-web`/`kitchen-web` — check for a stray
+`.env.local`.** `NEXT_PUBLIC_API_URL` is baked into the JS bundle at
+**build time**, not read at runtime — if either app has an
+`apps/*/.env.local` left over from local development (e.g. from
+`rsync`-ing a working tree instead of a clean `git clone`/`git pull`,
+which is exactly how this shipped wrong the first time this was
+deployed), Next.js loads `.env.local` at a **higher priority than any
+other env source**, including a real value you `export`ed in the
+shell — so the build silently bakes in `http://localhost:4000/api/v1`
+and every request from a real browser fails with
+`net::ERR_CONNECTION_REFUSED` against `localhost:4000`, invisible from
+the server side (`curl` from the instance itself has no such file
+problem, so every server-side health check looks perfectly fine while
+the deployed browser bundle is completely broken — this exact gap
+shipped once and was only caught from a live browser's DevTools
+Console, not from anything on the server).
+
+```bash
+# Before each build, from the repo root:
+for app in admin-web kitchen-web; do
+  echo "NEXT_PUBLIC_API_URL=https://api.shrianandamsweets.in/api/v1" > apps/$app/.env.local
+done
+```
+
+Verify it actually landed in the compiled output before moving on —
+don't just trust the file was read correctly:
+
+```bash
+grep -rl "localhost:4000" apps/admin-web/.next/static apps/kitchen-web/.next/static
+# should print nothing; if it prints a file, the build picked up the
+# wrong value — fix .env.local and rebuild that app
 ```
 
 ## 9. Set up the app processes with pm2
@@ -243,6 +291,17 @@ curl -o /dev/null -w "%{http_code}\n" http://localhost:3001/login   # 200
 pm2 logs shri-anandam-notification-worker --lines 5 --nostream   # "Database connection established"
 ```
 
+**These 4 checks only prove each process boots and serves a page — none
+of them would have caught the `NEXT_PUBLIC_API_URL` bug from step 8**
+(a `curl` to `/login` gets `200` whether the page's JS calls the real
+API or `localhost:4000` — the difference only shows up when a real
+browser runs that JS). Once DNS/TLS are live (step 10), the real
+end-to-end check is: open the deployed site in an actual browser, log
+in, and watch DevTools' Network tab for any request going to
+`localhost` instead of the real domain — or repeat step 8's
+`grep -rl "localhost:4000"` check against the deployed `.next/static`
+directory.
+
 Persist across reboots:
 
 ```bash
@@ -259,21 +318,27 @@ records, the Nginx reverse-proxy config, and certbot.
 
 ```bash
 cd shri-anandam-app
-git pull
+git pull   # a real `git pull` here never recreates the .env.local
+           # problem below — that only happened once, from an rsync
+           # deploy that copied a local working tree wholesale. Still
+           # worth the grep check if apps/*/.env.local exists for any
+           # other reason (e.g. someone testing something on the box).
 pnpm install --frozen-lockfile
 pnpm --filter @shri-anandam/api prisma:generate
 pnpm --filter @shri-anandam/api prisma:deploy
+pnpm -r --filter='./packages/*' build   # see step 8 — required before the services/apps below
 pnpm --filter @shri-anandam/api build
 pnpm --filter @shri-anandam/notification-worker build
 pnpm --filter @shri-anandam/admin-web build
 pnpm --filter @shri-anandam/kitchen-web build
+grep -rl "localhost:4000" apps/admin-web/.next/static apps/kitchen-web/.next/static   # see step 8 — must print nothing
 pm2 reload infrastructure/pm2/ecosystem.config.js   # zero-downtime reload, not restart
 ```
 
 ## Real bugs this doc's own verification caught (fixed, not just noted)
 
 Writing this doc meant actually running the deploy path against a real
-build, not just describing it — two things broke that would have
+build, not just describing it — several things broke that would have
 silently failed on the real instance otherwise:
 
 - **`services/notification-worker`'s production `start` script never
@@ -297,3 +362,31 @@ silently failed on the real instance otherwise:
   `node_modules/next/dist/bin/next` (real JS, has a `#!/usr/bin/env
   node` shebang). Verified live: both admin-web and kitchen-web came up
   under pm2 and served real `200`s.
+- **`packages/*` needed an explicit build step before `services/api`
+  would even compile** — `tsc` failed with "Cannot find module
+  '@shri-anandam/shared-types'" until `packages/shared-types`,
+  `packages/validation`, and `packages/config` were built first (their
+  own `dist/`). Not obvious from the root `package.json`'s own `build`
+  script, which does this automatically via a `--filter` glob covering
+  both — easy to miss when running each app's build individually, which
+  is what this doc originally did. Now step 8 does it explicitly, first.
+- **The real REDIS_PASSWORD-in-a-URL bug** — see the warning under step
+  6 above; `ioredis`'s strict URL parser rejected a base64-generated
+  password containing `+`/`/` outright, crashing `services/api` on
+  every boot (`TypeError: Invalid URL`) until the password was
+  regenerated alphanumeric-only and the Redis container recreated to
+  pick it up.
+- **`NEXT_PUBLIC_API_URL` silently baked in as `localhost:4000`** — see
+  the warning under step 8 above. This one didn't show up in any
+  server-side check (every `curl`, every `pm2 logs`, every `/health`
+  looked completely fine) — it only surfaced when the site was actually
+  opened in a real browser and every data-fetching request failed with
+  `net::ERR_CONNECTION_REFUSED` against `localhost:4000`. Root cause: an
+  `apps/admin-web/.env.local`/`apps/kitchen-web/.env.local` left over
+  from local development (copied over by an `rsync`-based deploy, not
+  present in git) took priority over the real value at build time.
+  Fixed by overwriting both files with the real production URL,
+  rebuilding, and confirming via `grep` against the compiled
+  `.next/static` output — then confirming a second time against the
+  actual JS chunks served over the live public domain, since a build
+  artifact check alone doesn't prove what's actually being served.
