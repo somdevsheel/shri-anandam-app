@@ -2,7 +2,14 @@
   "compilerOptions": {
     "target": "ES2022",
     "module": "commonjs",
-    "moduleResolution": "node",
+    // "node10" is the modern explicit name for what used to be the bare
+    // "node" option — same CommonJS-style resolution, no behavior change,
+    // just silences TS's deprecation warning ("node" is being removed in
+    // TS 7.0). Not "node16"/"nodenext"/"bundler" — those enable different,
+    // stricter resolution rules (package.json "exports" conditions, ESM
+    // extension requirements) that could break existing imports across
+    // every package here without a dedicated pass to verify each one.
+    "moduleResolution": "node10",
     "lib": ["ES2022"],
     "strict": true,
     "noUncheckedIndexedAccess": true,
