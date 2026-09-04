@@ -13,12 +13,12 @@
     "preview": {
       "distribution": "internal",
       "android": { "buildType": "apk" },
-      "env": { "EXPO_PUBLIC_API_URL": "https://staging-api.shrianandam.com/api/v1" }
+      "env": { "EXPO_PUBLIC_API_URL": "https://api.shrianandamsweets.in/api/v1" }
     },
     "production": {
       "autoIncrement": true,
       "android": { "buildType": "app-bundle" },
-      "env": { "EXPO_PUBLIC_API_URL": "https://api.shrianandam.com/api/v1" }
+      "env": { "EXPO_PUBLIC_API_URL": "https://api.shrianandamsweets.in/api/v1" }
     }
   },
   "submit": {

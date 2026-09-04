@@ -29,12 +29,17 @@ Load Balancer (TLS termination)
 
 Applications:
 
-| App | Stack | Talks to |
-|---|---|---|
-| `apps/customer-mobile` | React Native | API over HTTPS + WebSocket |
-| `apps/owner-mobile` | React Native | API over HTTPS, FCM push |
-| `apps/admin-web` | Next.js | API over HTTPS + WebSocket |
-| `apps/kitchen-web` | Next.js (PWA) | API over HTTPS + WebSocket |
+| App | Stack | Talks to | Domain |
+|---|---|---|---|
+| `apps/customer-mobile` | React Native | API over HTTPS + WebSocket | — (native app, no hosting) |
+| `apps/owner-mobile` | React Native | API over HTTPS, FCM push | — (native app, no hosting) |
+| `apps/admin-web` | Next.js | API over HTTPS + WebSocket | `admin.shrianandamsweets.in` |
+| `apps/kitchen-web` | Next.js (PWA) | API over HTTPS + WebSocket | `kitchen.shrianandamsweets.in` |
+| `services/api` | NestJS | — | `api.shrianandamsweets.in` |
+
+3 subdomains of the existing `shrianandamsweets.in` domain — the main
+website itself is untouched. See `docs/deployment/domain-and-dns.md`
+for the DNS records, Nginx config, and TLS setup.
 
 ## Statelessness (section 66)
 
