@@ -37,6 +37,10 @@ interface RequestContext {
 
 const ORDER_DETAIL_INCLUDE = {
   branch: true,
+  // Just enough to let the owner app show a "call customer" button
+  // (section 19) — never the full Customer record, and a customer
+  // viewing their own order already knows their own number/name.
+  customer: { select: { mobileNumber: true, name: true } },
   items: { include: { addons: true } },
   addressSnapshot: true,
   statusHistory: { orderBy: { createdAt: "asc" } },
