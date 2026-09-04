@@ -428,6 +428,16 @@ model Product {
   name        String
   slug        String   @unique
   description String?
+  ingredients String?
+  /// Free-form allergen tags (e.g. "nuts", "dairy", "gluten") — a string
+  /// array rather than JSON because customers filter/search on these
+  /// (section 5's "Allergen information"), unlike nutritionalInfo below.
+  allergens   String[] @default([])
+  /// Nutrition facts (calories, protein, fat, carbs, sugar, ...). JSON is
+  /// the deliberate exception here (see section 36 / database-architecture.md):
+  /// the field set varies per product and is never filtered/queried on,
+  /// only displayed — unlike allergens or tags, which are.
+  nutritionalInfo Json?
   tags        String[] @default([])
   isActive    Boolean  @default(true)
   isFeatured  Boolean  @default(false)

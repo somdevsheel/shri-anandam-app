@@ -136,3 +136,15 @@ to hurt.
 **Decision:** every `ZodValidationPipe` binding is `@Body(new ZodValidationPipe(schema))` / `@Query(...)` / `@Param(...)` on the specific parameter — never `@UsePipes(new ZodValidationPipe(schema))` at the method level.
 
 **Why:** a method-level `@UsePipes()` runs that pipe against *every* resolved parameter, not just the one the schema is for. NestJS excludes the built-in `@Req()`/`@Res()`/`@Next()` decorators from this, but a custom parameter decorator (`@CurrentUser()`, used on nearly every staff-facing route to get the authenticated principal) is not excluded — it gets validated against the body/query schema too, and fails, because a `AuthenticatedStaff` object obviously doesn't match a `CreateBranchDto` shape. This was caught live (Phase 2 manual verification): `POST /branches` with a perfectly valid body returned `400 { name: Required, code: Required, address: Required }` — the error was actually coming from validating `request.user` against `createBranchSchema`, not from the body at all. Parameter-scoped pipes only ever see the one argument they're bound to, so this class of bug can't happen.
+
+## ADR-011: Catalog admin permissions reuse product.* — no separate category/addon/variant permissions
+
+**Decision:** `Category`, `ProductVariant`, `ProductImage`, `Addon`, and `BranchProduct` management all gate on `Permission.PRODUCT_READ/CREATE/UPDATE/DELETE` — there is no `category.manage`, `addon.manage`, etc.
+
+**Why:** these entities only exist to describe or organize the catalog; the brief's own permission list (section 34) already treats "product" as the catalog's unit of access control, and staff.assign-style role design elsewhere in this codebase (ADR-007) is deliberately not fine-grained beyond what a real distinct admin workflow needs. A MANAGER who can create/edit products is expected to also manage the categories those products live in and the add-ons attached to them — splitting these into separate permissions would be permission sprawl with no real access-control benefit (section 77: don't overengineer without a reason). Branch/Organization got their own permissions in Phase 2 because those are genuinely distinct admin surfaces (see ADR for that phase's reasoning) — Category/Addon/Variant are not; they're catalog sub-resources.
+
+## ADR-012: Public catalog price sort/filter deferred
+
+**Decision:** `GET /catalog/products` supports pagination, search, category, tag, branch-availability, and featured filters, and sorts by name or newest — but not by price.
+
+**Why:** a product's price is really a range across its variants (Kaju Katli 250g vs 2kg), so "sort products by price" requires either a denormalized `minPriceInPaise` column kept in sync on every variant write, or a proper search index. Section 51 already plans PostgreSQL search now with an abstraction that allows OpenSearch later — price sort/filter is a natural fit for that migration, not something to bolt onto a plain Prisma `orderBy` today. Revisit when Phase catalog-search work starts; until then this is a known, deliberate gap, not an oversight.

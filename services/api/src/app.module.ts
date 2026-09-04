@@ -16,6 +16,10 @@ import { OrganizationsModule } from "./organizations/organizations.module";
 import { BranchesModule } from "./branches/branches.module";
 import { StaffModule } from "./staff/staff.module";
 import { RolesModule } from "./roles/roles.module";
+import { CategoriesModule } from "./categories/categories.module";
+import { ProductsModule } from "./products/products.module";
+import { AddonsModule } from "./addons/addons.module";
+import { CatalogModule } from "./catalog/catalog.module";
 
 import { RequestIdMiddleware } from "./common/middleware/request-id.middleware";
 import { GlobalExceptionFilter } from "./common/filters/http-exception.filter";
@@ -49,9 +53,13 @@ import { PermissionsGuard } from "./common/guards/permissions.guard";
     BranchesModule,
     StaffModule,
     RolesModule,
-    // Catalog, Cart, Orders, Payments, Inventory, Delivery, Coupons,
-    // Notifications, and Reviews modules are added in their respective
-    // implementation phases (see docs/architecture).
+    CategoriesModule,
+    ProductsModule,
+    AddonsModule,
+    CatalogModule,
+    // Cart, Orders, Payments, Inventory, Delivery, Coupons, Notifications,
+    // and Reviews modules are added in their respective implementation
+    // phases (see docs/architecture).
   ],
   providers: [
     // Order matters: ThrottlerGuard -> JwtAuthGuard -> PermissionsGuard.

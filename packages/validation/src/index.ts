@@ -5,3 +5,6 @@ export * from "./branch.schema";
 export * from "./staff.schema";
 export * from "./role.schema";
 export * from "./audit.schema";
+export * from "./category.schema";
+export * from "./product.schema";
+export * from "./addon.schema";
