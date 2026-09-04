@@ -241,7 +241,6 @@ model Staff {
   branchStaff     BranchStaff[]
   sessions        Session[]
   deviceTokens    DeviceToken[]
-  auditLogsActor  AuditLog[]        @relation("AuditLogActor")
   orderNotes      OrderNote[]
   priceChanges    PriceHistory[]
   reviewReplies   ReviewReply[]
@@ -1075,6 +1074,15 @@ model ReviewReply {
 // SECURITY
 // =============================================================================
 
+/// actorId is deliberately NOT a foreign key. actorType says which table
+/// it names (STAFF -> Staff.id, CUSTOMER -> Customer.id, SYSTEM -> null)
+/// and a single relation can't reference two different tables — the same
+/// reasoning already applied to LoginAttempt.identifier and
+/// SecurityEvent.actorId below. An audit log is an append-only historical
+/// record; it must remain queryable and correct even for an actor type a
+/// hard FK could never model, so resolve actorId's target table with
+/// actorType in application code rather than relying on referential
+/// integrity here.
 model AuditLog {
   id           String    @id @default(uuid())
   actorId      String?
@@ -1087,8 +1095,6 @@ model AuditLog {
   ipAddress    String?
   userAgent    String?
   createdAt    DateTime  @default(now())
-
-  actorStaff Staff? @relation("AuditLogActor", fields: [actorId], references: [id])
 
   @@index([entityType, entityId])
   @@index([actorId])

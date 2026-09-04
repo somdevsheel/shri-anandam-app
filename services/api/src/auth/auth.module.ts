@@ -34,6 +34,9 @@ import { ConsoleSmsProvider } from "./providers/console-sms.provider";
     // environment — see docs/architecture/notification-architecture.md.
     { provide: SMS_PROVIDER, useClass: ConsoleSmsProvider },
   ],
-  exports: [AuthService],
+  // PasswordService is exported so StaffModule can hash/verify passwords
+  // when admin-creating staff or resetting a password, without staff
+  // needing to depend on the rest of the auth flow.
+  exports: [AuthService, PasswordService],
 })
 export class AuthModule {}

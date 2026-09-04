@@ -1,4 +1,4 @@
-import { Body, Controller, HttpCode, HttpStatus, Post, Req, UsePipes } from "@nestjs/common";
+import { Body, Controller, HttpCode, HttpStatus, Post, Req } from "@nestjs/common";
 import { Throttle } from "@nestjs/throttler";
 import type { Request } from "express";
 import {
@@ -14,10 +14,7 @@ import {
 import { AuthService } from "./auth.service";
 import { Public } from "../common/decorators/public.decorator";
 import { ZodValidationPipe } from "../common/pipes/zod-validation.pipe";
-
-function requestContext(req: Request) {
-  return { userAgent: req.headers["user-agent"], ipAddress: req.ip };
-}
+import { requestContext } from "../common/util/request-context";
 
 @Controller("auth")
 export class AuthController {
@@ -27,8 +24,7 @@ export class AuthController {
   @Throttle({ default: { limit: 3, ttl: 60_000 } }) // section 69: OTP endpoints get the strictest limits
   @Post("customer/otp/request")
   @HttpCode(HttpStatus.OK)
-  @UsePipes(new ZodValidationPipe(requestOtpSchema))
-  async requestOtp(@Body() body: RequestOtpDto) {
+  async requestOtp(@Body(new ZodValidationPipe(requestOtpSchema)) body: RequestOtpDto) {
     await this.auth.requestCustomerOtp(body.mobileNumber);
     return { message: "OTP sent" };
   }
@@ -37,8 +33,7 @@ export class AuthController {
   @Throttle({ default: { limit: 5, ttl: 60_000 } })
   @Post("customer/otp/verify")
   @HttpCode(HttpStatus.OK)
-  @UsePipes(new ZodValidationPipe(verifyOtpSchema))
-  async verifyOtp(@Body() body: VerifyOtpDto, @Req() req: Request) {
+  async verifyOtp(@Body(new ZodValidationPipe(verifyOtpSchema)) body: VerifyOtpDto, @Req() req: Request) {
     return this.auth.verifyCustomerOtp(body.mobileNumber, body.otp, body.name, requestContext(req));
   }
 
@@ -46,8 +41,7 @@ export class AuthController {
   @Throttle({ default: { limit: 5, ttl: 60_000 } })
   @Post("staff/login")
   @HttpCode(HttpStatus.OK)
-  @UsePipes(new ZodValidationPipe(staffLoginSchema))
-  async staffLogin(@Body() body: StaffLoginDto, @Req() req: Request) {
+  async staffLogin(@Body(new ZodValidationPipe(staffLoginSchema)) body: StaffLoginDto, @Req() req: Request) {
     return this.auth.staffLogin(body.email, body.password, requestContext(req));
   }
 
@@ -55,16 +49,14 @@ export class AuthController {
   @Throttle({ default: { limit: 10, ttl: 60_000 } })
   @Post("refresh")
   @HttpCode(HttpStatus.OK)
-  @UsePipes(new ZodValidationPipe(refreshTokenSchema))
-  async refresh(@Body() body: RefreshTokenDto, @Req() req: Request) {
+  async refresh(@Body(new ZodValidationPipe(refreshTokenSchema)) body: RefreshTokenDto, @Req() req: Request) {
     return this.auth.refresh(body.refreshToken, requestContext(req));
   }
 
   @Public()
   @Post("logout")
   @HttpCode(HttpStatus.OK)
-  @UsePipes(new ZodValidationPipe(refreshTokenSchema))
-  async logout(@Body() body: RefreshTokenDto) {
+  async logout(@Body(new ZodValidationPipe(refreshTokenSchema)) body: RefreshTokenDto) {
     await this.auth.logout(body.refreshToken);
     return { message: "Logged out" };
   }

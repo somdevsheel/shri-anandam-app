@@ -25,7 +25,10 @@ export class JwtStrategy extends PassportStrategy(Strategy, "jwt") {
    */
   async validate(payload: JwtPayload): Promise<AuthenticatedUser> {
     if (payload.subjectType === "STAFF") {
-      const staff = await this.prisma.staff.findUnique({ where: { id: payload.sub } });
+      const staff = await this.prisma.staff.findUnique({
+        where: { id: payload.sub },
+        select: { id: true, email: true, isActive: true },
+      });
       if (!staff || !staff.isActive) {
         throw new UnauthorizedException("Staff account is inactive");
       }

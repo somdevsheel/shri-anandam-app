@@ -104,3 +104,35 @@ without standing up a second piece of infrastructure for V1's order
 volume. The publisher interface (not yet needed until Phase 8's
 notification worker) is what section 38 calls for — swapping in RabbitMQ
 or Kafka later is a new adapter, not a rewrite of domain code.
+
+## ADR-009: Cross-package imports resolve through node_modules/dist, not tsconfig `paths`
+
+**Decision:** `tsconfig.base.json` has no `paths` mapping to workspace
+packages' `src/`. `@shri-anandam/shared-types` etc. resolve exactly the
+way a published npm package would: through the pnpm-symlinked
+`node_modules` entry, to whatever `package.json`'s `main`/`types` point
+at (`dist/index.js`/`dist/index.d.ts`).
+
+**Why:** Phase 1 had `paths` pointing at `src/` for editor convenience,
+which worked while packages were leaves with no cross-imports among
+themselves. Phase 2 introduced `packages/validation` importing
+`@shri-anandam/shared-types` (for the `Role`/`Permission` enums in Zod
+schemas), and `paths`-to-source made `tsc` pull `shared-types/src/*.ts`
+into `validation`'s compilation — which `rootDir` then correctly rejected
+(TS6059: those files aren't under `validation/src`). Resolving through
+`node_modules`/`dist` instead sidesteps this entirely, since declaration
+files from another package's `dist/` aren't subject to the importing
+package's `rootDir`.
+
+**Trade-off accepted:** a package must be rebuilt (`pnpm build`, or
+build just that package) before a dependent package's typecheck/build/
+dev picks up a source change — there is no live-source cross-package
+resolution. Acceptable at this repo's size; revisit with TypeScript
+project references (`composite`/`references`) if that friction starts
+to hurt.
+
+## ADR-010: Validation pipes are always parameter-scoped, never method-scoped
+
+**Decision:** every `ZodValidationPipe` binding is `@Body(new ZodValidationPipe(schema))` / `@Query(...)` / `@Param(...)` on the specific parameter — never `@UsePipes(new ZodValidationPipe(schema))` at the method level.
+
+**Why:** a method-level `@UsePipes()` runs that pipe against *every* resolved parameter, not just the one the schema is for. NestJS excludes the built-in `@Req()`/`@Res()`/`@Next()` decorators from this, but a custom parameter decorator (`@CurrentUser()`, used on nearly every staff-facing route to get the authenticated principal) is not excluded — it gets validated against the body/query schema too, and fails, because a `AuthenticatedStaff` object obviously doesn't match a `CreateBranchDto` shape. This was caught live (Phase 2 manual verification): `POST /branches` with a perfectly valid body returned `400 { name: Required, code: Required, address: Required }` — the error was actually coming from validating `request.user` against `createBranchSchema`, not from the body at all. Parameter-scoped pipes only ever see the one argument they're bound to, so this class of bug can't happen.

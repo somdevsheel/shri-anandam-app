@@ -16,14 +16,18 @@
     "declaration": true,
     "declarationMap": true,
     "sourceMap": true,
-    "incremental": true,
-    "baseUrl": ".",
-    "paths": {
-      "@shri-anandam/shared-types": ["packages/shared-types/src"],
-      "@shri-anandam/validation": ["packages/validation/src"],
-      "@shri-anandam/config": ["packages/config/src"],
-      "@shri-anandam/api-client": ["packages/api-client/src"],
-      "@shri-anandam/utilities": ["packages/utilities/src"]
-    }
+    "incremental": true
+    // Deliberately no "paths" mapping to workspace packages' src/. Every
+    // package (packages/*, services/api) builds to dist/ with its
+    // package.json "main"/"types" pointing there, and pnpm's workspace
+    // symlinks make `@shri-anandam/x` resolve through node_modules exactly
+    // like a published package would — the same resolution at typecheck
+    // time, build time, and runtime. A "paths" override that pointed at
+    // source instead caused cross-package imports (e.g. validation ->
+    // shared-types) to pull source files outside the importing package's
+    // rootDir, which `tsc` correctly rejects (TS6059). Consequence: run
+    // `pnpm build` (or build the specific dependency package) after
+    // changing a shared package before a dependent package's typecheck/
+    // build/dev picks up the change — see docs/architecture/decisions.md.
   }
 }

@@ -48,6 +48,23 @@ export const Permission = {
   REPORT_READ: "report.read",
 
   AUDIT_READ: "audit.read",
+
+  // Not in the brief's original permission list (section 34) — added in
+  // Phase 2 because the admin panel's Branches/Organization/Roles screens
+  // (section 25) need their own enforcement points. ORGANIZATION_UPDATE
+  // and ROLE_MANAGE are deliberately kept out of MANAGER's default grant
+  // below: changing org identity or what a role is allowed to do is
+  // owner-level, not day-to-day branch management.
+  ORGANIZATION_READ: "organization.read",
+  ORGANIZATION_UPDATE: "organization.update",
+
+  BRANCH_READ: "branch.read",
+  BRANCH_CREATE: "branch.create",
+  BRANCH_UPDATE: "branch.update",
+  BRANCH_DELETE: "branch.delete",
+
+  /** Edit which permissions a Role grants (role_permissions) — distinct from staff.update (editing one staff member's own roles/branches/profile). */
+  ROLE_MANAGE: "role.manage",
 } as const;
 
 export type Permission = (typeof Permission)[keyof typeof Permission];
@@ -80,19 +97,35 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<Role, Permission[]> = {
     Permission.STAFF_UPDATE,
     Permission.REPORT_READ,
     Permission.AUDIT_READ,
+    Permission.ORGANIZATION_READ,
+    Permission.BRANCH_READ,
+    Permission.BRANCH_CREATE,
+    Permission.BRANCH_UPDATE,
   ],
   [Role.CASHIER]: [
     Permission.ORDER_READ,
     Permission.ORDER_ACCEPT,
     Permission.PAYMENT_READ,
     Permission.PAYMENT_COLLECT,
+    Permission.BRANCH_READ,
   ],
-  [Role.KITCHEN]: [Permission.ORDER_READ, Permission.ORDER_ACCEPT, Permission.INVENTORY_READ],
-  [Role.SUPPORT]: [Permission.ORDER_READ, Permission.ORDER_CANCEL, Permission.PAYMENT_READ],
+  [Role.KITCHEN]: [
+    Permission.ORDER_READ,
+    Permission.ORDER_ACCEPT,
+    Permission.INVENTORY_READ,
+    Permission.BRANCH_READ,
+  ],
+  [Role.SUPPORT]: [
+    Permission.ORDER_READ,
+    Permission.ORDER_CANCEL,
+    Permission.PAYMENT_READ,
+    Permission.BRANCH_READ,
+  ],
   [Role.ACCOUNTANT]: [
     Permission.PAYMENT_READ,
     Permission.PAYMENT_REFUND,
     Permission.REPORT_READ,
     Permission.AUDIT_READ,
+    Permission.BRANCH_READ,
   ],
 };

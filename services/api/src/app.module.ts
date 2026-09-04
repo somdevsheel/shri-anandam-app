@@ -11,6 +11,11 @@ import { LoggerModule } from "./logger/logger.module";
 import { OutboxModule } from "./outbox/outbox.module";
 import { HealthModule } from "./health/health.module";
 import { AuthModule } from "./auth/auth.module";
+import { AuditModule } from "./audit/audit.module";
+import { OrganizationsModule } from "./organizations/organizations.module";
+import { BranchesModule } from "./branches/branches.module";
+import { StaffModule } from "./staff/staff.module";
+import { RolesModule } from "./roles/roles.module";
 
 import { RequestIdMiddleware } from "./common/middleware/request-id.middleware";
 import { GlobalExceptionFilter } from "./common/filters/http-exception.filter";
@@ -39,9 +44,14 @@ import { PermissionsGuard } from "./common/guards/permissions.guard";
     OutboxModule,
     HealthModule,
     AuthModule,
+    AuditModule,
+    OrganizationsModule,
+    BranchesModule,
+    StaffModule,
+    RolesModule,
     // Catalog, Cart, Orders, Payments, Inventory, Delivery, Coupons,
-    // Notifications, Reviews, Admin, and Branches modules are added in
-    // their respective implementation phases (see docs/architecture).
+    // Notifications, and Reviews modules are added in their respective
+    // implementation phases (see docs/architecture).
   ],
   providers: [
     // Order matters: ThrottlerGuard -> JwtAuthGuard -> PermissionsGuard.
