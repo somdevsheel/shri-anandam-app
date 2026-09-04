@@ -1,15 +1,8 @@
-# Placeholder assets
+# Brand assets
 
-`icon.png`, `adaptive-icon.png`, and `splash.png` are programmatically
-generated placeholders (a plain terracotta circle on the dark owner-app
-background) — they exist only so `expo start`/`eas build` doesn't fail
-looking for a missing file. Replace them with real brand assets before
-any real build:
-
-- `icon.png` — 1024×1024, no transparency, iOS/Android app icon
-- `adaptive-icon.png` — 1024×1024, transparent background, the
-  foreground layer of the Android adaptive icon (`app.config.ts`'s
-  `android.adaptiveIcon.backgroundColor` supplies the background)
-- `splash.png` — sized for `resizeMode: "contain"`, shown at cold start
-
-`npx expo install` won't regenerate these — swap the files directly.
+Same real Shri Anandam logo as `apps/customer-mobile/assets/` (the gold
+"श्री" medallion, sourced from the existing website's favicon set),
+flattened onto this app's own dark theme background (`#2B2320`) instead
+of the customer app's light one — see that app's README for the exact
+generation approach (flatten for `icon.png`, padded-transparent for
+`adaptive-icon.png`, centered-on-background for `splash.png`).
