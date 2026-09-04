@@ -5,6 +5,7 @@ import { AuditLogService } from "../audit/audit-log.service";
 import { ConflictError, NotFoundError, ValidationError } from "../common/errors/app.error";
 import { paginate } from "../common/util/paginate";
 import { ensureUniqueSlug } from "../common/util/unique-slug";
+import { S3UploadService } from "../uploads/s3-upload.service";
 import type { AuthenticatedStaff } from "../auth/types/authenticated-user.type";
 import type {
   AssignProductAddonsDto,
@@ -35,6 +36,7 @@ export class ProductsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly auditLog: AuditLogService,
+    private readonly s3: S3UploadService,
   ) {}
 
   // ---------------------------------------------------------------------
@@ -356,6 +358,10 @@ export class ProductsService {
       throw new NotFoundError("ProductImage", imageId);
     }
     await this.prisma.productImage.delete({ where: { id: imageId } });
+    // Best-effort — the DB row is already gone regardless of whether this
+    // succeeds (see deleteIfOwnedByUs's own comment for why it never
+    // throws and why it no-ops for URLs this service didn't generate).
+    await this.s3.deleteIfOwnedByUs(image.url);
   }
 
   // ---------------------------------------------------------------------

@@ -52,3 +52,9 @@ export class InsufficientStockError extends AppError {
     super(ErrorCode.INSUFFICIENT_STOCK, message, HttpStatus.CONFLICT);
   }
 }
+
+export class ServiceUnavailableError extends AppError {
+  constructor(message: string) {
+    super(ErrorCode.SERVICE_UNAVAILABLE, message, HttpStatus.SERVICE_UNAVAILABLE);
+  }
+}

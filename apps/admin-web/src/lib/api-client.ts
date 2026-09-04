@@ -104,3 +104,42 @@ export async function apiRequest<T>(path: string, options: RequestOptions = {}):
 
   return json.data;
 }
+
+/**
+ * Same auth/401-refresh shape as apiRequest, but a multipart/form-data
+ * body — can't share apiRequest itself since that always JSON.stringifies
+ * the body and forces Content-Type: application/json (a fetch body of
+ * FormData needs the browser to set its own multipart boundary, which it
+ * only does when Content-Type is left unset).
+ */
+export async function uploadFile<T>(path: string, file: File, isRetry = false): Promise<T> {
+  const headers: Record<string, string> = {};
+  const { accessToken } = useAuthStore.getState();
+  if (accessToken) headers.Authorization = `Bearer ${accessToken}`;
+
+  const formData = new FormData();
+  formData.append("file", file);
+
+  const response = await fetch(`${API_URL}${path}`, { method: "POST", headers, body: formData });
+  const json = (await response.json().catch(() => null)) as ApiResponse<T> | null;
+
+  if (!response.ok || !json || !json.success) {
+    const error = json && !json.success ? json.error : null;
+
+    if (response.status === 401 && !isRetry) {
+      const refreshed = await refreshAccessToken();
+      if (refreshed) {
+        return uploadFile<T>(path, file, true);
+      }
+    }
+
+    throw new ApiError(
+      error?.code ?? "NETWORK_ERROR",
+      error?.message ?? "Something went wrong. Please try again.",
+      response.status,
+      error?.details ?? [],
+    );
+  }
+
+  return json.data;
+}

@@ -58,5 +58,10 @@ export const ErrorCode = {
   PAYMENT_FAILED: "PAYMENT_FAILED",
   INVALID_STATE_TRANSITION: "INVALID_STATE_TRANSITION",
   INTERNAL_ERROR: "INTERNAL_ERROR",
+  /** A backing integration exists in code but isn't configured for this
+   * environment (e.g. S3 credentials blank) — distinct from
+   * INTERNAL_ERROR so a client can tell "we broke" from "an admin needs
+   * to finish setting this up." */
+  SERVICE_UNAVAILABLE: "SERVICE_UNAVAILABLE",
 } as const;
 export type ErrorCode = (typeof ErrorCode)[keyof typeof ErrorCode];

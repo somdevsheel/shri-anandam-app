@@ -21,6 +21,7 @@ import { StaffModule } from "./staff/staff.module";
 import { RolesModule } from "./roles/roles.module";
 import { CategoriesModule } from "./categories/categories.module";
 import { ProductsModule } from "./products/products.module";
+import { UploadsModule } from "./uploads/uploads.module";
 import { AddonsModule } from "./addons/addons.module";
 import { CatalogModule } from "./catalog/catalog.module";
 import { InventoryModule } from "./inventory/inventory.module";
@@ -85,6 +86,7 @@ import { PermissionsGuard } from "./common/guards/permissions.guard";
     RolesModule,
     CategoriesModule,
     ProductsModule,
+    UploadsModule,
     AddonsModule,
     CatalogModule,
     InventoryModule,

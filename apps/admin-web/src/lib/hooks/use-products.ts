@@ -8,7 +8,7 @@ import type {
   UpdateProductDto,
   UpdateProductVariantDto,
 } from "@shri-anandam/validation";
-import { apiRequest } from "@/lib/api-client";
+import { apiRequest, uploadFile } from "@/lib/api-client";
 import { queryKeys } from "@/lib/query-client";
 import type { PaginatedResult, Product, ProductImage, ProductVariant } from "@/lib/types";
 
@@ -88,6 +88,14 @@ export function useRemoveVariant(productId: string) {
   return useMutation({
     mutationFn: (variantId: string) => apiRequest<ProductVariant>(`/products/${productId}/variants/${variantId}`, { method: "DELETE" }),
     onSuccess: () => invalidateProduct(queryClient, productId),
+  });
+}
+
+/** Uploads a file to S3, returns its public URL — a separate step from
+ * useAddImage, which attaches an already-known URL to a product. */
+export function useUploadProductImage() {
+  return useMutation({
+    mutationFn: (file: File) => uploadFile<{ url: string }>("/uploads/product-image", file),
   });
 }
 

@@ -86,6 +86,7 @@ function mapStatusToErrorCode(status: number): string {
       return ErrorCode.RATE_LIMITED;
     case HttpStatus.BAD_REQUEST:
     case HttpStatus.UNPROCESSABLE_ENTITY:
+    case HttpStatus.PAYLOAD_TOO_LARGE: // e.g. multer's file-size-limit MulterError
       return ErrorCode.VALIDATION_ERROR;
     default:
       return ErrorCode.INTERNAL_ERROR;
