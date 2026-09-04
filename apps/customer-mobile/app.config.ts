@@ -57,9 +57,11 @@ const config: ExpoConfig = {
   extra: {
     apiUrl: process.env.EXPO_PUBLIC_API_URL ?? "http://localhost:4000/api/v1",
     eas: {
-      // Filled in by `eas init` when the project is first linked to an
-      // Expo Application Services account — see docs/architecture/react-native-architecture.md.
-      projectId: process.env.EAS_PROJECT_ID,
+      // Linked via `eas init` to @iamsosomm/shri-anandam-customer
+      // (https://expo.dev/accounts/iamsosomm/projects/shri-anandam-customer)
+      // — not a secret, safe to commit; EAS_PROJECT_ID can still override
+      // for a different Expo account/project.
+      projectId: process.env.EAS_PROJECT_ID ?? "7429b252-058d-4e12-8bd8-542a4c26c423",
     },
   },
 };

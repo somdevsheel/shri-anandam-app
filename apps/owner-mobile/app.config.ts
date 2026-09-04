@@ -68,7 +68,11 @@ const config: ExpoConfig = {
   extra: {
     apiUrl: process.env.EXPO_PUBLIC_API_URL ?? "http://localhost:4000/api/v1",
     eas: {
-      projectId: process.env.EAS_PROJECT_ID,
+      // Linked via `eas init` to @iamsosomm/shri-anandam-owner
+      // (https://expo.dev/accounts/iamsosomm/projects/shri-anandam-owner)
+      // — not a secret, safe to commit; EAS_PROJECT_ID can still override
+      // for a different Expo account/project.
+      projectId: process.env.EAS_PROJECT_ID ?? "3639387f-3071-44ff-90a1-4f2eb4a306a5",
     },
   },
 };
