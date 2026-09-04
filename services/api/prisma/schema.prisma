@@ -509,6 +509,7 @@ model Addon {
 
   productAddons ProductAddon[]
   cartItemAddons CartItemAddon[]
+  orderItemAddons OrderItemAddon[]
 
   @@map("addons")
 }
@@ -598,6 +599,19 @@ model CartItemAddon {
 // =============================================================================
 // ORDERS
 // =============================================================================
+
+/// Backs human-friendly order number generation (SA-YYYYMMDD-NNNN,
+/// section 9). One row per calendar day; `counter` is advanced with a
+/// single atomic `INSERT ... ON CONFLICT DO UPDATE SET counter =
+/// counter + 1 RETURNING counter` (see OrdersService.nextOrderNumber),
+/// which is race-free under concurrent order creation without needing
+/// an explicit row lock — Postgres's ON CONFLICT clause is itself atomic.
+model OrderSequence {
+  date    String @id // "YYYYMMDD"
+  counter Int    @default(0)
+
+  @@map("order_sequences")
+}
 
 model Order {
   id              String          @id @default(uuid())
@@ -694,10 +708,18 @@ model OrderItem {
 model OrderItemAddon {
   id                 String @id @default(uuid())
   orderItemId        String
+  /// Nullable, and NEVER authoritative for historical display (the
+  /// snapshot fields below are) — kept only so Reorder (section 6/76)
+  /// can re-match against the current Addon without fragile
+  /// name-string matching. A renamed, deactivated, or deleted addon
+  /// still displays correctly on this historical order; reorder simply
+  /// can't re-add it (surfaced to the customer, not silently dropped).
+  addonId              String?
   addonNameSnapshot  String
   priceInPaiseSnapshot Int
 
   orderItem OrderItem @relation(fields: [orderItemId], references: [id], onDelete: Cascade)
+  addon     Addon?    @relation(fields: [addonId], references: [id])
 
   @@index([orderItemId])
   @@map("order_item_addons")

@@ -24,6 +24,7 @@ import { CatalogModule } from "./catalog/catalog.module";
 import { InventoryModule } from "./inventory/inventory.module";
 import { CustomersModule } from "./customers/customers.module";
 import { CartModule } from "./cart/cart.module";
+import { OrdersModule } from "./orders/orders.module";
 
 import { RequestIdMiddleware } from "./common/middleware/request-id.middleware";
 import { GlobalExceptionFilter } from "./common/filters/http-exception.filter";
@@ -65,8 +66,9 @@ import { PermissionsGuard } from "./common/guards/permissions.guard";
     InventoryModule,
     CustomersModule,
     CartModule,
-    // Orders, Payments, Delivery, Coupons, Notifications, and Reviews
-    // modules are added in their respective implementation phases (see
+    OrdersModule,
+    // Payments, Delivery, Coupons, Notifications, and Reviews modules
+    // are added in their respective implementation phases (see
     // docs/architecture).
   ],
   providers: [

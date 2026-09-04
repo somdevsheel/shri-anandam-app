@@ -2,10 +2,19 @@ import { Injectable } from "@nestjs/common";
 import type { Prisma } from "@prisma/client";
 import { PrismaService } from "../database/prisma.service";
 import type { PrismaTransactionClient } from "../database/prisma.service";
-import type { AuthenticatedUser } from "../auth/types/authenticated-user.type";
+
+/**
+ * Deliberately narrower than the full `AuthenticatedUser` union —
+ * record() only ever reads `subjectType`/`id`, so callers that only
+ * have a minimal actor reference (e.g. OrdersService's status-transition
+ * actor, which isn't a full re-authenticated principal) don't need to
+ * fabricate the rest of AuthenticatedStaff/AuthenticatedCustomer's
+ * shape (permissions, email, mobileNumber) just to log an action.
+ */
+type AuditActor = { subjectType: "STAFF" | "CUSTOMER"; id: string } | { subjectType: "SYSTEM" };
 
 interface RecordAuditEntryInput {
-  actor: AuthenticatedUser | { subjectType: "SYSTEM" };
+  actor: AuditActor;
   action: string;
   entityType: string;
   entityId: string;
@@ -36,7 +45,7 @@ export class AuditLogService {
    */
   async record(input: RecordAuditEntryInput, tx: PrismaTransactionClient | PrismaService = this.prisma): Promise<void> {
     const actorType = input.actor.subjectType;
-    const actorId = actorType === "STAFF" || actorType === "CUSTOMER" ? (input.actor as AuthenticatedUser).id : null;
+    const actorId = input.actor.subjectType === "SYSTEM" ? null : input.actor.id;
 
     await tx.auditLog.create({
       data: {
