@@ -1,0 +1,73 @@
+# Production Postgres + Redis for a single-instance deploy (e.g. the AWS
+# Lightsail setup in docs/deployment/aws-lightsail-setup.md).
+#
+# Deliberately NOT the same file as the repo root's docker-compose.yml —
+# that one is explicitly local-dev-only (see its own MinIO comment,
+# "changeme" passwords, and dev-avoids-port-conflict remapped ports
+# 55433/6381). This file uses real generated passwords (required, no
+# default — see the `:?` env var syntax below) and the standard
+# 5432/6379 ports, since a dedicated production host has no other
+# project's Postgres/Redis to collide with. No MinIO here either —
+# production uses a real S3-compatible bucket (S3_* vars in .env), not
+# a locally-hosted one.
+#
+# Run from the repo root so relative paths/volumes resolve predictably:
+#   docker compose -f infrastructure/docker/docker-compose.prod.yml --env-file .env up -d
+#
+# Requires POSTGRES_USER, POSTGRES_PASSWORD, POSTGRES_DB, and
+# REDIS_PASSWORD to already be set in .env (see .env.example's
+# "Production database/Redis" section) — docker compose will refuse to
+# start with a clear error naming the missing one, rather than silently
+# falling back to a weak default, if any are missing.
+
+name: shri-anandam-prod
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: shri-anandam-postgres
+    restart: always
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:?Set POSTGRES_USER in .env}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
+      POSTGRES_DB: ${POSTGRES_DB:?Set POSTGRES_DB in .env}
+    ports:
+      # Bound to loopback only — matches docs/architecture/
+      # production-architecture.md's "Postgres/Redis never reach the
+      # public internet" rule. Nginx/the app processes run on the same
+      # host and reach this via 127.0.0.1, nothing else can.
+      - "127.0.0.1:5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks:
+      - shri-anandam-prod-net
+
+  redis:
+    image: redis:7-alpine
+    container_name: shri-anandam-redis
+    restart: always
+    command: ["redis-server", "--appendonly", "yes", "--requirepass", "${REDIS_PASSWORD:?Set REDIS_PASSWORD in .env}"]
+    ports:
+      - "127.0.0.1:6379:6379"
+    volumes:
+      - redisdata:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "$${REDIS_PASSWORD}", "--no-auth-warning", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks:
+      - shri-anandam-prod-net
+
+networks:
+  shri-anandam-prod-net:
+    driver: bridge
+
+volumes:
+  pgdata:
+  redisdata:

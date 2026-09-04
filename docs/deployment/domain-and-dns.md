@@ -22,6 +22,7 @@ updated to this).
 | Piece | Status |
 |---|---|
 | Every app pointed at the right subdomain in its own config (`eas.json`, `.env.example` files, `CORS_ALLOWED_ORIGINS`) | **Done** — see the diff this doc ships alongside |
+| All 4 Node processes (api, notification-worker, admin-web, kitchen-web) actually running on the right ports under pm2 | **Live-verified** on this machine — all 4 came up and served real HTTP 200s (`curl` against each) under `infrastructure/pm2/ecosystem.config.js`; see `docs/deployment/aws-lightsail-setup.md` |
 | `infrastructure/nginx/shri-anandam.conf` (reverse proxy, 3 server blocks) | Written, syntactically a real Nginx config, **not tested against a running Nginx** — no server exists in this environment to run one on |
 | DNS records actually created | **Not done — needs you.** I have no access to your DNS provider. Records to add are below. |
 | TLS certificates issued | Not done — needs a real reachable server for certbot's HTTP-01 challenge (see below) |
@@ -45,6 +46,14 @@ instance ever restarts/is recreated, which would silently break DNS
 until you noticed and manually updated 3 records. Attach the static IP
 once, point all 3 A records at it, and a restart never breaks DNS again.
 
+Your instance's current public IPv4 is `13.126.8.106` (Mumbai,
+`ap-south-1a`) — check the Lightsail console's **Networking** tab for
+that instance: if a static IP is already attached, `13.126.8.106` *is*
+that permanent value and you can use it directly below; if not, attach
+one now (Lightsail may hand you a different static IP than this
+existing one — use whatever the static IP page shows, not necessarily
+this exact address).
+
 Set TTL to something short (300s) while you're setting this up, so a
 mistake is quick to fix; raise it back to an hour+ once everything's
 confirmed working.
@@ -67,10 +76,11 @@ sudo systemctl reload nginx
 This assumes each app is already running on the instance on its own
 port (`services/api` on `4000` per `.env`'s `APP_PORT`, `apps/admin-web`
 on `3000`, `apps/kitchen-web` on `3001` — see the comment at the top of
-that config file for exactly where those numbers come from). Process
-management (pm2/systemd units to keep all 3 running and restart them on
-crash/reboot) isn't set up by this repo yet — that's separate work from
-domain routing.
+that config file for exactly where those numbers come from). See
+`docs/deployment/aws-lightsail-setup.md` for getting all 4 Node
+processes (api, notification-worker, admin-web, kitchen-web) actually
+running and kept alive via pm2 (`infrastructure/pm2/ecosystem.config.js`)
+— that's a prerequisite to this step, not part of domain routing itself.
 
 ## 3. TLS (HTTPS) via Let's Encrypt
 
@@ -124,19 +134,22 @@ later step instead of a clear one at the right step:
 1. Attach a Lightsail static IP to the instance.
 2. Add the 3 DNS A records (step 1 above), wait for propagation
    (`dig` each subdomain until it returns the static IP).
-3. Get all 3 apps + the API running on the instance on their assigned
-   ports (outside the scope of this doc — needs the still-missing
-   Dockerfiles/process manager for `apps/admin-web`, `apps/kitchen-web`,
-   and `services/notification-worker`; only `services/api` has one
-   today, `infrastructure/docker/api.Dockerfile`).
+3. Get all 4 Node processes running on the instance on their assigned
+   ports — see `docs/deployment/aws-lightsail-setup.md` (pm2 +
+   `infrastructure/pm2/ecosystem.config.js`).
 4. Deploy `infrastructure/nginx/shri-anandam.conf` (step 2 above),
    confirm plain-HTTP routing works — `services/api`'s `@Public()`
-   `GET /api/v1/health` (`services/api/src/health/health.controller.ts`)
-   needs no auth, so it's the simplest smoke test:
-   `curl -H "Host: api.shrianandamsweets.in" http://<static-ip>/api/v1/health`
+   `GET /health` (`services/api/src/health/health.controller.ts`) needs
+   no auth and is deliberately **unprefixed** (`main.ts`'s
+   `setGlobalPrefix` explicitly excludes `health`/`live`/`ready`/
+   `metrics` from `API_PREFIX` — orchestrators/scrapers expect fixed,
+   unversioned paths — not `/api/v1/health`, caught live testing this
+   exact command), so it's the simplest smoke test:
+   `curl -H "Host: api.shrianandamsweets.in" http://<static-ip>/health`
    before DNS has propagated, or plain
-   `curl https://api.shrianandamsweets.in/api/v1/health` after step 5's
-   TLS is up.
+   `curl https://api.shrianandamsweets.in/health` after step 5's TLS is
+   up. A healthy response looks like
+   `{"success":true,"data":{"status":"ok","info":{"database":{"status":"up"},"redis":{"status":"up"}}...`.
 5. Run `certbot` (step 3 above) to get HTTPS working.
 6. Set the real production env vars (step 4 above) and restart every
    process so they pick up the new values.
