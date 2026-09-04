@@ -244,6 +244,10 @@ model Staff {
   orderNotes      OrderNote[]
   priceChanges    PriceHistory[]
   reviewReplies   ReviewReply[]
+  inventoryTransactions InventoryTransaction[]
+  stockAdjustments      StockAdjustment[]
+  wastageEntries        Wastage[]
+  productionBatches     ProductionBatch[]
 
   @@map("staff")
 }
@@ -802,6 +806,7 @@ model InventoryTransaction {
 
   inventoryItem InventoryItem @relation(fields: [inventoryItemId], references: [id])
   referenceOrder Order?       @relation(fields: [referenceOrderId], references: [id])
+  staff         Staff?        @relation(fields: [staffId], references: [id])
 
   @@index([inventoryItemId])
   @@index([referenceOrderId])
@@ -838,22 +843,25 @@ model StockAdjustment {
   createdAt       DateTime @default(now())
 
   inventoryItem InventoryItem @relation(fields: [inventoryItemId], references: [id])
+  staff         Staff         @relation(fields: [staffId], references: [id])
 
   @@index([inventoryItemId])
   @@map("stock_adjustments")
 }
 
 model ProductionBatch {
-  id                String   @id @default(uuid())
-  productVariantId  String
-  branchId          String
-  batchCode         String   @unique
-  quantityProduced  Decimal  @db.Decimal(12, 3)
-  producedAt        DateTime @default(now())
-  expiresAt         DateTime?
+  id                 String    @id @default(uuid())
+  productVariantId   String
+  branchId           String
+  batchCode          String    @unique
+  quantityProduced   Decimal   @db.Decimal(12, 3)
+  producedByStaffId  String?
+  producedAt         DateTime  @default(now())
+  expiresAt          DateTime?
 
-  productVariant ProductVariant @relation(fields: [productVariantId], references: [id])
-  branch         Branch         @relation(fields: [branchId], references: [id])
+  productVariant  ProductVariant @relation(fields: [productVariantId], references: [id])
+  branch          Branch         @relation(fields: [branchId], references: [id])
+  producedByStaff Staff?         @relation(fields: [producedByStaffId], references: [id])
 
   @@index([productVariantId])
   @@index([branchId])
@@ -869,6 +877,7 @@ model Wastage {
   createdAt       DateTime @default(now())
 
   inventoryItem InventoryItem @relation(fields: [inventoryItemId], references: [id])
+  staff         Staff         @relation(fields: [staffId], references: [id])
 
   @@index([inventoryItemId])
   @@map("wastage")

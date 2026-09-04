@@ -1,6 +1,7 @@
 import { MiddlewareConsumer, Module, NestModule } from "@nestjs/common";
 import { ConfigModule, ConfigService } from "@nestjs/config";
 import { APP_FILTER, APP_GUARD, APP_INTERCEPTOR } from "@nestjs/core";
+import { ScheduleModule } from "@nestjs/schedule";
 import { ThrottlerGuard, ThrottlerModule } from "@nestjs/throttler";
 import { LoggerErrorInterceptor } from "nestjs-pino";
 
@@ -20,6 +21,7 @@ import { CategoriesModule } from "./categories/categories.module";
 import { ProductsModule } from "./products/products.module";
 import { AddonsModule } from "./addons/addons.module";
 import { CatalogModule } from "./catalog/catalog.module";
+import { InventoryModule } from "./inventory/inventory.module";
 
 import { RequestIdMiddleware } from "./common/middleware/request-id.middleware";
 import { GlobalExceptionFilter } from "./common/filters/http-exception.filter";
@@ -30,6 +32,7 @@ import { PermissionsGuard } from "./common/guards/permissions.guard";
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true, validate }),
+    ScheduleModule.forRoot(),
     ThrottlerModule.forRootAsync({
       imports: [ConfigModule],
       inject: [ConfigService],
@@ -57,8 +60,9 @@ import { PermissionsGuard } from "./common/guards/permissions.guard";
     ProductsModule,
     AddonsModule,
     CatalogModule,
-    // Cart, Orders, Payments, Inventory, Delivery, Coupons, Notifications,
-    // and Reviews modules are added in their respective implementation
+    InventoryModule,
+    // Cart, Orders, Payments, Delivery, Coupons, Notifications, and
+    // Reviews modules are added in their respective implementation
     // phases (see docs/architecture).
   ],
   providers: [

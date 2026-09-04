@@ -46,3 +46,9 @@ export class InvalidStateTransitionError extends AppError {
     super(ErrorCode.INVALID_STATE_TRANSITION, message, HttpStatus.CONFLICT);
   }
 }
+
+export class InsufficientStockError extends AppError {
+  constructor(message = "Insufficient stock available") {
+    super(ErrorCode.INSUFFICIENT_STOCK, message, HttpStatus.CONFLICT);
+  }
+}
