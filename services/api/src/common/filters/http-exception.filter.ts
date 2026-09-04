@@ -2,6 +2,7 @@ import { ArgumentsHost, Catch, ExceptionFilter, HttpException, HttpStatus, Logge
 import type { Request, Response } from "express";
 import { ErrorCode, type ApiErrorResponse } from "@shri-anandam/shared-types";
 import { AppError } from "../errors/app.error";
+import { Sentry } from "../../sentry";
 
 /**
  * Global exception filter. Converts every thrown error into the standard
@@ -35,10 +36,21 @@ export class GlobalExceptionFilter implements ExceptionFilter {
       message = typeof body === "string" ? body : ((body as { message?: string }).message ?? exception.message);
       code = mapStatusToErrorCode(status);
     } else {
-      // Unknown/unexpected error — log full detail server-side, never expose it.
+      // Unknown/unexpected error — log full detail server-side, never
+      // expose it. This is the ONLY branch that reaches Sentry
+      // (security-architecture.md: "Sentry captures unhandled
+      // exceptions") — an AppError/HttpException is an application
+      // decision (a 404, a validation failure, a permission denial),
+      // not a bug to page someone about; only a genuinely unexpected
+      // throw is.
       this.logger.error(
         `Unhandled exception [${requestId}]: ${exception instanceof Error ? exception.stack : String(exception)}`,
       );
+      Sentry.withScope((scope) => {
+        scope.setTag("requestId", requestId);
+        scope.setContext("request", { method: request.method, url: request.url });
+        Sentry.captureException(exception);
+      });
     }
 
     if (status >= 500 && !(exception instanceof AppError)) {

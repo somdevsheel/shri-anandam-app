@@ -94,21 +94,49 @@ can be extracted without a rewrite:
 - **Logs**: structured JSON via `nestjs-pino`, one line per request with
   `requestId`, `method`, `url`, `status`, latency; sensitive fields
   redacted (see `docs/architecture/security-architecture.md`).
-- **Metrics**: Prometheus scrape endpoint added alongside the first
-  production deployment (Phase 12) — request latency/error histograms,
-  queue backlog, DB/Redis latency.
-- **Tracing**: OpenTelemetry SDK wired in Phase 12 once there are
-  multiple services worth correlating a trace across.
-- **Errors**: Sentry (`SENTRY_DSN`) captures unhandled exceptions from
-  `GlobalExceptionFilter` in staging/production.
+- **Metrics**: `GET /metrics` (Prometheus text exposition format,
+  `services/api/src/metrics`) — request latency/count histograms
+  (labeled by route *pattern*, not raw URL, to avoid unbounded
+  cardinality), `outbox_pending_events`/`inventory_active_reservations`
+  queue-backlog gauges, plus Node's own process/GC/event-loop metrics
+  via `prom-client`'s `collectDefaultMetrics()`. `@Public()` (no JWT —
+  a scraper has none to present) but, like the health endpoints, this
+  is meant to sit behind the same private-network restriction section
+  65 already describes for Postgres/Redis, not additional
+  application-layer auth. Verified live, including cross-checking its
+  own numbers against an independent client-side load-test measurement
+  — see `docs/deployment/load-testing.md`.
+- **Tracing**: OpenTelemetry deliberately **not** wired yet, even
+  though Phase 12 is complete — `services/api` and
+  `services/notification-worker` are the only two services that exist,
+  and this repo has no OTLP collector available anywhere to verify a
+  real exporter against (`OTEL_EXPORTER_OTLP_ENDPOINT` in `.env.example`
+  points at a local default that was never actually running). Wiring
+  the SDK without anything to confirm it against would be exactly the
+  kind of unverified "looks done" work this project's own standard
+  rejects — left as explicit future work for whoever has a real
+  collector to point it at, not silently skipped.
+- **Errors**: Sentry (`services/api/src/sentry.ts`) captures unhandled
+  exceptions from `GlobalExceptionFilter` — only the genuinely-
+  unexpected-error branch, not application-level 4xx errors. A no-op
+  everywhere `SENTRY_DSN` is unset (every environment this repo can
+  currently run in — no Sentry project provisioned), verified live to
+  not itself throw or destabilize the request path when a real
+  unhandled exception occurred during Phase 12's database-outage
+  failure test (see `docs/deployment/failure-testing.md`).
 
 ## Backups (section 64)
 
-- PostgreSQL: automated daily base backup + continuous WAL archiving for
-  point-in-time recovery, stored off the primary server (managed Postgres
-  provider or a separate backup host — never co-located with the
-  production DB instance).
-- Backup restore is tested on a schedule (not just configured), and
-  failures alert the on-call owner — tracked as a Phase 12 CI job
-  (`docs/deployment/backup-restore.md`, to be written alongside that
-  work).
+- PostgreSQL: `infrastructure/scripts/backup-postgres.sh` /
+  `restore-postgres.sh` — `pg_dump`/`pg_restore` in custom format, with
+  a documented, **live-tested** procedure in
+  `docs/deployment/backup-restore.md` (row counts plus a content
+  checksum verified identical after a real restore into a scratch
+  database).
+- Not yet built: continuous WAL archiving/point-in-time recovery (a
+  server/provider-level setting, not something this repo's scripts can
+  add on their own — see the backup doc's "what's still needed"
+  section), off-primary backup storage wiring (the mechanism exists,
+  needs a real bucket to point at), and scheduled/alerting automated
+  restore tests (needs a real host or CI runner with
+  production-equivalent access, which doesn't exist yet).

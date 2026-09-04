@@ -1,4 +1,11 @@
 import "reflect-metadata";
+import { initSentry } from "./sentry";
+
+// Before any other import touches Node's built-ins (Sentry's own
+// guidance — see sentry.ts's comment for why this stays a no-op in
+// every environment this repo can currently run in).
+initSentry();
+
 import { NestFactory } from "@nestjs/core";
 import { ConfigService } from "@nestjs/config";
 import helmet from "helmet";
@@ -28,10 +35,10 @@ async function bootstrap() {
   // (section 41). Version bumps (v2) happen by changing this prefix per
   // deployment rather than per-route versioning, matching the flat
   // /api/v1/<domain> structure used throughout the brief. Health probes
-  // stay unprefixed at /health, /live, /ready (section 46) since
-  // orchestrators and load balancers expect fixed, unversioned paths.
+  // and the Prometheus scrape endpoint stay unprefixed (section 46) —
+  // orchestrators/scrapers expect fixed, unversioned paths.
   app.setGlobalPrefix(config.get<string>("API_PREFIX", "api/v1"), {
-    exclude: ["health", "live", "ready"],
+    exclude: ["health", "live", "ready", "metrics"],
   });
   app.enableShutdownHooks();
 

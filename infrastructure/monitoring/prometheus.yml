@@ -1,0 +1,27 @@
+# Example scrape config for services/api's GET /metrics
+# (services/api/src/metrics — Phase 12). Not deployed anywhere by this
+# repo — there is no Prometheus server running in this environment to
+# verify a real scrape against — this is the config a real Prometheus
+# instance would use, for whoever stands one up.
+#
+# `GET /metrics` is unauthenticated (a scraper has no JWT to present —
+# see the metrics controller's own comment) and is meant to sit behind
+# the same private-network restriction docs/architecture/
+# production-architecture.md already describes for Postgres/Redis, not
+# be reachable from the public internet.
+
+global:
+  scrape_interval: 15s
+
+scrape_configs:
+  - job_name: "shri-anandam-api"
+    metrics_path: /metrics
+    static_configs:
+      # One target per replica in a real deployment — a load balancer
+      # in front would only ever let Prometheus reach one instance per
+      # request, so each replica needs its own entry (or service
+      # discovery, e.g. Kubernetes pod discovery) rather than a single
+      # LB-fronted URL.
+      - targets: ["localhost:4000"]
+        labels:
+          service: "api"

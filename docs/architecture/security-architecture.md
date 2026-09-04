@@ -47,14 +47,23 @@ API.
 ## Rate limiting (section 69)
 
 Global default (`RATE_LIMIT_MAX_REQUESTS` per `RATE_LIMIT_TTL_SECONDS`,
-default 100/min) via `ThrottlerGuard`, registered globally in
-`AppModule`. Sensitive endpoints override it with stricter per-route
-limits (`@Throttle`):
+default 300/min — see `.env.example`'s comment for the Phase 12 load-
+testing math that raised this from 100) via `ThrottlerGuard`, registered
+globally in `AppModule`. Sensitive endpoints override it with stricter
+per-route limits (`@Throttle`):
 
 - OTP request: 3/min per IP
 - OTP verify: 5/min per IP
 - Staff login: 5/min per IP
 - Token refresh: 10/min per IP
+
+Storage is Redis (`ThrottlerStorageRedisService`, reusing the app's
+existing Redis connection), not the package's default in-memory store —
+counters are shared across every API replica, matching this repo's own
+documented statelessness (`docs/architecture/production-architecture.md`).
+Caught live during Phase 12: the in-memory default silently let a staff
+login succeed with Redis fully stopped and no rate-limit state at all,
+contradicting that architecture; see ADR-024.
 
 This is on top of, not instead of, `OtpService`'s own per-mobile-number
 resend cooldown and max-attempt counter (both Redis-backed) — the
@@ -97,6 +106,45 @@ The Pino logger's `redact` config
 `accessToken` body fields from every log line, at every log level,
 including `debug` — this is a redaction list checked in code, not a
 convention developers have to remember per log call.
+
+## Dependency vulnerabilities (Phase 12)
+
+`pnpm audit --prod` reviewed, not just run-and-ignored. Real,
+in-the-request-path findings were fixed via `pnpm.overrides` in the root
+`package.json` (pinned to versions still within what `express`/
+`@nestjs/platform-express` themselves declare compatible — an earlier,
+overly-broad override attempt would have force-upgraded `body-parser`
+across an untested major version boundary; caught before install by
+checking `express`'s own declared `~1.20.3` requirement, not after):
+
+- `qs` (DoS via crafted array/comma-format input) → pinned to `6.16.0`
+- `body-parser` (DoS via a silently-disabled size limit) → pinned to
+  `1.20.6` (within `express@4.22.1`'s own `~1.20.3` requirement)
+- `multer` (multiple DoS vectors — deeply nested field names, aborted
+  uploads, resource exhaustion) → pinned to `2.2.0`
+
+Reviewed and accepted, not fixed, with reasoning for each:
+
+- `@nestjs/core`'s only remaining advisory is an injection vulnerability
+  specific to `SseStream` (Server-Sent Events) — this codebase uses
+  WebSockets (`services/api/src/realtime`) for realtime updates, never
+  NestJS's SSE feature (confirmed: no `@Sse()` decorator anywhere in
+  `services/api/src`), so the vulnerable code path is never reached.
+  Fixing it would mean forcing a NestJS 10→11 major-version upgrade for
+  a feature this app doesn't use — not a trade worth making blind this
+  late without the time to re-verify every module against it.
+- `uuid`'s remaining advisory is specific to v3/v5/v6 generation when a
+  buffer is explicitly provided by the caller — this codebase has no
+  direct `uuid` package usage at all (IDs come from Prisma's
+  `@default(uuid())` or Node's own `crypto.randomUUID()`), so it's a
+  deep transitive dependency of NestJS's own internals, in an API
+  surface this app's own code never calls into.
+- The rest (`decode-uri-component`, `file-type`, `glob`, `image-size`,
+  `lodash`) are dev-time-only dependencies of Expo CLI's own asset/
+  bundling pipeline (`apps/customer-mobile`/`apps/owner-mobile`'s
+  `devDependencies` tree) or ESLint's dependency chain — they run on a
+  developer's own machine during `expo start`/`eas build`/`eslint`,
+  never in a deployed, internet-facing process against untrusted input.
 
 ## Mobile security (section 70)
 
