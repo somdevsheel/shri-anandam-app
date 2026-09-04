@@ -22,6 +22,8 @@ import { ProductsModule } from "./products/products.module";
 import { AddonsModule } from "./addons/addons.module";
 import { CatalogModule } from "./catalog/catalog.module";
 import { InventoryModule } from "./inventory/inventory.module";
+import { CustomersModule } from "./customers/customers.module";
+import { CartModule } from "./cart/cart.module";
 
 import { RequestIdMiddleware } from "./common/middleware/request-id.middleware";
 import { GlobalExceptionFilter } from "./common/filters/http-exception.filter";
@@ -61,9 +63,11 @@ import { PermissionsGuard } from "./common/guards/permissions.guard";
     AddonsModule,
     CatalogModule,
     InventoryModule,
-    // Cart, Orders, Payments, Delivery, Coupons, Notifications, and
-    // Reviews modules are added in their respective implementation
-    // phases (see docs/architecture).
+    CustomersModule,
+    CartModule,
+    // Orders, Payments, Delivery, Coupons, Notifications, and Reviews
+    // modules are added in their respective implementation phases (see
+    // docs/architecture).
   ],
   providers: [
     // Order matters: ThrottlerGuard -> JwtAuthGuard -> PermissionsGuard.

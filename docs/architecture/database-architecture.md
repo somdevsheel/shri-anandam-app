@@ -39,6 +39,33 @@ covering every entity the brief's list names. Revisit if a future
 requirement needs a genuinely shared identity (e.g. a staff member who is
 also a customer using one login).
 
+## Inventory is tracked per variant/SKU, not as a shared bulk pool
+
+`InventoryItem` is unique per `(branchId, productVariantId)` — each
+packaged size (Kaju Katli 250g, 500g, 1kg, 2kg) has its **own** stock
+figure, produced and restocked independently (`ProductionBatch` records
+a batch of one specific variant). This is deliberately different from
+section 30's illustrative example ("Available stock = 17.5 kg... orders
+500g... system reserves 0.5 kg"), which describes a single bulk pool
+divided across variants by weight.
+
+Both are legitimate models; this schema chose per-variant tracking
+because it matches how a sweets shop that pre-packages fixed-weight
+boxes actually operates (each box size is produced, boxed, and shelved
+as its own finished good) and keeps a cart/order's `quantity` field a
+plain count with no unit-conversion math anywhere in the order path.
+
+**Consequence for `InventoryItem.unit`:** for a fixed-weight packaged
+variant, `unit` should be `PIECE` and `stockQuantity` is a count of
+boxes (e.g. `4` means four 500g boxes on the shelf) — a cart/order
+quantity of `2` consumes exactly `2` from that count. `unit: GRAM` is
+reserved for a genuinely bulk/loose-sold variant (a single "Kaju Katli —
+sold by weight" SKU where the customer specifies an exact gram amount at
+add-to-cart time) — that flow doesn't exist yet; building it would mean
+extending `CartItem`/`OrderItem` with a customer-entered weight rather
+than a plain integer quantity, which is a real but separate feature, not
+something to bolt onto the current fixed-package flow.
+
 ## Reservation-based inventory (section 31)
 
 `StockReservation` rows hold stock during checkout without decrementing

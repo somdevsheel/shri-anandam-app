@@ -195,6 +195,7 @@ model Customer {
   reviews        Review[]
   couponUsages   CouponUsage[]
   notifications  Notification[]
+  cart           Cart?
 
   @@index([mobileNumber])
   @@map("customers")
@@ -370,6 +371,7 @@ model Branch {
   inventoryItems     InventoryItem[]
   deliveryZones      DeliveryZone[]
   productionBatches  ProductionBatch[]
+  carts              Cart[]
 
   @@index([organizationId])
   @@map("branches")
@@ -455,6 +457,7 @@ model Product {
   branchProducts BranchProduct[]
   orderItems     OrderItem[]
   reviews        Review[]
+  cartItems      CartItem[]
 
   @@index([categoryId, isActive])
   @@map("products")
@@ -477,6 +480,7 @@ model ProductVariant {
   priceHistory     PriceHistory[]
   inventoryItems   InventoryItem[]
   productionBatches ProductionBatch[]
+  cartItems         CartItem[]
 
   @@index([productId, isActive])
   @@map("product_variants")
@@ -504,6 +508,7 @@ model Addon {
   createdAt     DateTime @default(now())
 
   productAddons ProductAddon[]
+  cartItemAddons CartItemAddon[]
 
   @@map("addons")
 }
@@ -533,6 +538,61 @@ model PriceHistory {
 
   @@index([variantId])
   @@map("price_history")
+}
+
+// =============================================================================
+// CART (section 6: server-aware — never trust client-cached price/
+// availability at checkout time; this table is what "server-aware"
+// means in practice, not local mobile state)
+// =============================================================================
+
+/// One active cart per customer, scoped to a single branch (pricing,
+/// availability, and — later — delivery zones are all branch-specific).
+/// Switching branches mid-cart is a client-side "clear cart, start over"
+/// flow, not something this schema needs to model.
+model Cart {
+  id         String   @id @default(uuid())
+  customerId String   @unique
+  branchId   String
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  customer Customer   @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  branch   Branch     @relation(fields: [branchId], references: [id])
+  items    CartItem[]
+
+  @@map("carts")
+}
+
+model CartItem {
+  id                  String   @id @default(uuid())
+  cartId              String
+  productId           String
+  variantId           String
+  quantity            Int
+  specialInstructions String?
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  cart    Cart           @relation(fields: [cartId], references: [id], onDelete: Cascade)
+  product Product        @relation(fields: [productId], references: [id])
+  variant ProductVariant @relation(fields: [variantId], references: [id])
+  addons  CartItemAddon[]
+
+  @@index([cartId])
+  @@map("cart_items")
+}
+
+model CartItemAddon {
+  id         String @id @default(uuid())
+  cartItemId String
+  addonId    String
+
+  cartItem CartItem @relation(fields: [cartItemId], references: [id], onDelete: Cascade)
+  addon    Addon    @relation(fields: [addonId], references: [id])
+
+  @@unique([cartItemId, addonId])
+  @@map("cart_item_addons")
 }
 
 // =============================================================================

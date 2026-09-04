@@ -9,3 +9,5 @@ export * from "./category.schema";
 export * from "./product.schema";
 export * from "./addon.schema";
 export * from "./inventory.schema";
+export * from "./customer.schema";
+export * from "./cart.schema";

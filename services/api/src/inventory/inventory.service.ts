@@ -102,6 +102,28 @@ export class InventoryService {
     };
   }
 
+  /**
+   * Read-only availability check for a branch+variant, used by CartService
+   * to flag "only N left"/"out of stock" while browsing — not part of the
+   * reservation engine itself (see InventoryReservationService for the
+   * transaction-safe hold/consume path checkout will use in Phase 6).
+   * Returns null when the variant isn't inventory-tracked at this branch
+   * at all, which callers should treat as "availability unknown, assume
+   * available" rather than "zero stock."
+   */
+  async getAvailableQuantity(branchId: string, productVariantId: string): Promise<Prisma.Decimal | null> {
+    const item = await this.prisma.inventoryItem.findUnique({
+      where: { branchId_productVariantId: { branchId, productVariantId } },
+    });
+    if (!item) return null;
+
+    const activeReserved = await this.prisma.stockReservation.aggregate({
+      where: { inventoryItemId: item.id, status: "ACTIVE", expiresAt: { gt: new Date() } },
+      _sum: { quantity: true },
+    });
+    return item.stockQuantity.minus(activeReserved._sum.quantity ?? new Prisma.Decimal(0));
+  }
+
   async create(dto: CreateInventoryItemDto, actor: AuthenticatedStaff, ctx: RequestContext) {
     const [branch, variant] = await Promise.all([
       this.prisma.branch.findUnique({ where: { id: dto.branchId } }),
