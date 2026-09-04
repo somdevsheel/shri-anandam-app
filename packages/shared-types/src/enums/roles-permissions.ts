@@ -45,6 +45,17 @@ export const Permission = {
   STAFF_UPDATE: "staff.update",
   STAFF_DELETE: "staff.delete",
 
+  // Also not in section 34's original list, same reason as
+  // ORGANIZATION_*/BRANCH_*/ROLE_MANAGE below: the admin panel's
+  // Customers screen (Phase 9) needs an admin-facing "look up any
+  // customer" capability distinct from a customer reading their own
+  // profile (which needs no permission at all — see CustomersController,
+  // scoped to the caller's own id by construction). CUSTOMER_UPDATE is
+  // narrow by design — deactivating a customer account, not editing
+  // their profile fields on their behalf.
+  CUSTOMER_READ: "customer.read",
+  CUSTOMER_UPDATE: "customer.update",
+
   REPORT_READ: "report.read",
 
   AUDIT_READ: "audit.read",
@@ -95,6 +106,8 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<Role, Permission[]> = {
     Permission.STAFF_READ,
     Permission.STAFF_CREATE,
     Permission.STAFF_UPDATE,
+    Permission.CUSTOMER_READ,
+    Permission.CUSTOMER_UPDATE,
     Permission.REPORT_READ,
     Permission.AUDIT_READ,
     Permission.ORGANIZATION_READ,
@@ -119,6 +132,7 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<Role, Permission[]> = {
     Permission.ORDER_READ,
     Permission.ORDER_CANCEL,
     Permission.PAYMENT_READ,
+    Permission.CUSTOMER_READ,
     Permission.BRANCH_READ,
   ],
   [Role.ACCOUNTANT]: [

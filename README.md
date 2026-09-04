@@ -74,6 +74,38 @@ for why this is Expo (dev client + EAS) rather than bare RN CLI, and
 `apps/customer-mobile/assets/README.md` — the icon/splash images
 currently checked in are placeholders, not brand assets.
 
+## Running the owner mobile app
+
+Same idea as the customer app, pointed at the staff-only login/order-
+management screens instead of OTP/browsing:
+
+```bash
+cd apps/owner-mobile
+cp .env.example .env
+npx expo start
+```
+
+Staff sign in with email/password (seeded bootstrap OWNER credentials —
+see above), not OTP. Push notifications need a real Firebase project
+(`google-services.json`) this repo doesn't ship with — see
+`docs/architecture/decisions.md` ADR-018/019 for how that's handled
+without one.
+
+## Running the admin web app
+
+```bash
+cd apps/admin-web
+cp .env.example .env.local     # Next.js convention — .env.local, not .env
+pnpm dev
+```
+
+Open `http://localhost:3000/login` and sign in with the same staff
+credentials as the owner app. See ADR-020 in `docs/architecture/decisions.md`
+for why auth here is an in-memory access token plus an `httpOnly`
+refresh cookie set by `app/api/auth/*` Route Handlers, rather than the
+mobile apps' `expo-secure-store` approach — a browser has no equivalent
+of an OS keychain to hold a long-lived token in.
+
 ## Common commands
 
 ```bash
@@ -106,7 +138,23 @@ brief for the full phase list):
   Native) — onboarding, mobile OTP auth, home/category/search browsing,
   product detail, a server-aware cart (`services/api/src/cart`) that
   never trusts a cached price, and saved addresses.
+- **Phase 6 — Orders**: checkout (COD/pay-at-store), the order status
+  state machine (`packages/shared-types`' `isValidOrderStatusTransition`),
+  order history, reorder.
+- **Phase 7 — Payments**: a `PaymentProvider` abstraction with a real
+  Razorpay implementation (HMAC-verified webhooks, refunds) and an
+  offline `ManualPaymentProvider`; payment reconciliation reporting.
+- **Phase 8 — Owner app & notifications**: `services/notification-worker`
+  (the outbox → FCM delivery pipeline), device registration, and
+  `apps/owner-mobile` (Expo/React Native) — order queue, order detail
+  with status-transition actions gated by the signed-in staff member's
+  real permissions, notification history, device management.
+- **Phase 9 — Admin web**: `apps/admin-web` (Next.js App Router) — full
+  business management: dashboard, orders, products (variants, add-ons,
+  images, branch availability), inventory (restock/adjust/wastage),
+  customers, staff & role/permission management, payment reconciliation
+  reports. See ADR-020/021 for its auth architecture and the small
+  backend additions (an admin customers endpoint) it needed.
 
-Orders/checkout, payments, delivery, coupons, notifications, reviews,
-the owner app, admin web, and the kitchen PWA are built out phase by
+Delivery, coupons, reviews, and the kitchen PWA are built out phase by
 phase from here.

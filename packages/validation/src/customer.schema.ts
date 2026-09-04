@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { uuidSchema } from "./common.schema";
+import { paginationQuerySchema, uuidSchema } from "./common.schema";
 
 export const updateCustomerProfileSchema = z.object({
   name: z.string().trim().min(1).max(150).optional(),
@@ -43,3 +43,20 @@ export const updateCustomerAddressSchema = z.object({
 export type UpdateCustomerAddressDto = z.infer<typeof updateCustomerAddressSchema>;
 
 export const addressIdParamSchema = uuidSchema;
+
+// ---------------------------------------------------------------------------
+// Admin (Phase 9) — a staff member looking up ANY customer, distinct from
+// the customer-scoped routes above which are always implicitly "me".
+// ---------------------------------------------------------------------------
+
+export const listCustomersAdminQuerySchema = paginationQuerySchema.extend({
+  isActive: z.coerce.boolean().optional(),
+  /** Matches against name or mobileNumber (see CustomersService.listAdmin). */
+  search: z.string().trim().max(150).optional(),
+});
+export type ListCustomersAdminQueryDto = z.infer<typeof listCustomersAdminQuerySchema>;
+
+export const updateCustomerAdminSchema = z.object({
+  isActive: z.boolean().optional(),
+});
+export type UpdateCustomerAdminDto = z.infer<typeof updateCustomerAdminSchema>;
