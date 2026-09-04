@@ -333,6 +333,16 @@ export class OrdersService {
     );
   }
 
+  /**
+   * `sortOrder` was accepted by the query schema but silently ignored
+   * here (always "desc") until apps/kitchen-web (Phase 10) needed
+   * oldest-pending-first ordering for its order queue — a kitchen
+   * screen sorted newest-first would let an old ticket silently drift
+   * to the bottom. "desc" (the schema's own default) still matches
+   * admin-web's and owner-mobile's existing callers, neither of which
+   * passes sortOrder, so this is additive, not a behavior change for
+   * them.
+   */
   async listAdmin(query: ListOrdersAdminQueryDto) {
     const where: Prisma.OrderWhereInput = {
       branchId: query.branchId,
@@ -344,7 +354,7 @@ export class OrdersService {
       { page: query.page, pageSize: query.pageSize, sortBy: query.sortBy ?? "", sortOrder: query.sortOrder },
       ({ skip, take }) =>
         this.prisma.$transaction([
-          this.prisma.order.findMany({ where, skip, take, orderBy: { createdAt: "desc" }, include: ORDER_DETAIL_INCLUDE }),
+          this.prisma.order.findMany({ where, skip, take, orderBy: { createdAt: query.sortOrder }, include: ORDER_DETAIL_INCLUDE }),
           this.prisma.order.count({ where }),
         ]),
     );

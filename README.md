@@ -106,6 +106,22 @@ refresh cookie set by `app/api/auth/*` Route Handlers, rather than the
 mobile apps' `expo-secure-store` approach — a browser has no equivalent
 of an OS keychain to hold a long-lived token in.
 
+## Running the kitchen PWA
+
+```bash
+cd apps/kitchen-web
+cp .env.example .env.local
+pnpm dev
+```
+
+Open `http://localhost:3000/login` (a separate port from admin-web if
+both run at once — Next.js picks the next free one automatically) and
+sign in with staff credentials. Same auth architecture as admin-web
+(ADR-020) but its own session — the two apps never share a login. See
+ADR-022 for why this polls every 5 seconds rather than using WebSockets
+yet (Phase 11), and for a couple of real ordering bugs the queue screen
+surfaced and fixed along the way.
+
 ## Common commands
 
 ```bash
@@ -155,6 +171,12 @@ brief for the full phase list):
   customers, staff & role/permission management, payment reconciliation
   reports. See ADR-020/021 for its auth architecture and the small
   backend additions (an admin customers endpoint) it needed.
+- **Phase 10 — Kitchen PWA**: `apps/kitchen-web` (Next.js, installable —
+  a real manifest + service worker, not just a responsive site) — a
+  single large-touch-target order queue with a new-order sound alert,
+  polling until Phase 11's WebSocket layer replaces it. See ADR-022,
+  including a real `sortOrder`-ignored bug this screen's requirements
+  surfaced in `OrdersService.listAdmin()`.
 
-Delivery, coupons, reviews, and the kitchen PWA are built out phase by
-phase from here.
+Delivery, coupons, reviews, realtime (WebSockets), and production
+hardening are built out phase by phase from here.

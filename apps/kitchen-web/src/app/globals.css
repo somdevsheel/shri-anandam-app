@@ -1,0 +1,57 @@
+@import "tailwindcss";
+
+/**
+ * Same brand palette as the other three apps, but this one is read from
+ * a few feet away on a kitchen counter/tablet — base font size is bumped
+ * up globally (see `body` below) rather than per-component, and the
+ * palette stays light-only (a kitchen display doesn't follow OS dark
+ * mode preference the way a phone does).
+ */
+:root {
+  --color-background: #fff8f0;
+  --color-surface: #ffffff;
+  --color-primary: #b3541e;
+  --color-primary-dark: #8a3f15;
+  --color-on-primary: #ffffff;
+  --color-accent: #d4a017;
+  --color-text: #2b2320;
+  --color-text-muted: #7a6f68;
+  --color-border: #efe3d6;
+  --color-success: #3d8b4c;
+  --color-danger: #c0392b;
+  --color-warning: #b7791f;
+  --color-info: #2e6fa3;
+}
+
+@theme inline {
+  --color-background: var(--color-background);
+  --color-surface: var(--color-surface);
+  --color-primary: var(--color-primary);
+  --color-primary-dark: var(--color-primary-dark);
+  --color-on-primary: var(--color-on-primary);
+  --color-accent: var(--color-accent);
+  --color-text: var(--color-text);
+  --color-text-muted: var(--color-text-muted);
+  --color-border: var(--color-border);
+  --color-success: var(--color-success);
+  --color-danger: var(--color-danger);
+  --color-warning: var(--color-warning);
+  --color-info: var(--color-info);
+}
+
+html {
+  /* Base 18px, not Tailwind's default 16px — a kitchen counter display
+     is read from further away and tapped with less precision than a
+     desk-bound admin panel. */
+  font-size: 18px;
+}
+
+body {
+  background: var(--color-background);
+  color: var(--color-text);
+  /* Kitchen tablets are usually mounted/propped, not held — a stray
+     pinch-zoom or pull-to-refresh mid-service is a worse failure mode
+     than losing those gestures entirely. */
+  overscroll-behavior: none;
+  touch-action: manipulation;
+}
