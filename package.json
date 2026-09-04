@@ -11,6 +11,7 @@
   "scripts": {
     "build": "pnpm -r --filter=./packages/* --filter=./services/* build",
     "dev:api": "pnpm --filter @shri-anandam/api start:dev",
+    "eas-build-post-install": "pnpm -r --filter=./packages/* build",
     "lint": "pnpm -r lint",
     "typecheck": "pnpm -r typecheck",
     "test": "pnpm -r test",
