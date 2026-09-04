@@ -1,0 +1,22 @@
+{
+  // Extends Expo's own base config (bundler module resolution, RN JSX
+  // settings), not the monorepo's tsconfig.base.json — that one targets
+  // Node/CommonJS for the backend and doesn't apply to a Metro-bundled
+  // RN app. Workspace packages (@shri-anandam/*) still resolve through
+  // node_modules per ADR-009, same as every other consumer.
+  "extends": "expo/tsconfig.base",
+  "compilerOptions": {
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    // TS 6 deprecated baseUrl/paths in favor of a future resolution
+    // mechanism, but Metro/Expo's own tooling still expects this form —
+    // silence the deprecation rather than drop the `@/*` alias.
+    "ignoreDeprecations": "6.0",
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["src/*"]
+    },
+    "types": ["jest"]
+  },
+  "include": ["app", "src", "*.ts", "*.tsx", ".expo/types/**/*.ts", "expo-env.d.ts"]
+}

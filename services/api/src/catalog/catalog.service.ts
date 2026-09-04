@@ -10,6 +10,12 @@ const PUBLIC_PRODUCT_INCLUDE = {
   variants: { where: { isActive: true }, orderBy: { priceInPaise: "asc" } },
   images: { orderBy: { sortOrder: "asc" } },
   productAddons: { where: { addon: { isActive: true } }, include: { addon: true } },
+  // The client needs to know which branch(es) actually carry this
+  // product to add it to cart (Cart is branch-scoped — see
+  // cart.service.ts) or show "not available near you." Full delivery-
+  // zone/pincode-based branch resolution is Phase 6 (checkout) scope;
+  // for browsing, every branch that stocks it is a valid choice.
+  branchProducts: { where: { isActive: true }, include: { branch: true } },
 } satisfies Prisma.ProductInclude;
 
 /**

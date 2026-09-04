@@ -57,6 +57,23 @@ API now running at `http://localhost:4000/api/v1`, health check at
 email/password for local login — **never used in production** (the seed
 skips creating it when `NODE_ENV=production`).
 
+## Running the customer mobile app
+
+With the API running (above):
+
+```bash
+cd apps/customer-mobile
+cp .env.example .env          # EXPO_PUBLIC_API_URL — defaults to http://localhost:4000/api/v1
+npx expo start                # scan the QR code with Expo Go, or press `a`/`i` for a simulator
+```
+
+`npx expo start --web` also works for a quick check without a device/
+simulator — the app renders the same React Native code via
+react-native-web. See `docs/architecture/react-native-architecture.md`
+for why this is Expo (dev client + EAS) rather than bare RN CLI, and
+`apps/customer-mobile/assets/README.md` — the icon/splash images
+currently checked in are placeholders, not brand assets.
+
 ## Common commands
 
 ```bash
@@ -69,11 +86,27 @@ pnpm prisma:studio    # browse the local database
 
 ## Status
 
-**Phase 1 (Foundation) is in place**: monorepo, TypeScript, NestJS API
-skeleton, PostgreSQL schema (Prisma) covering the full data model, Redis,
-JWT auth (customer OTP + staff password) with refresh-token rotation,
-RBAC enforced via a global permissions guard, structured logging,
-global error handling, health checks, Docker, CI. Catalog, Cart, Orders,
-Payments, Inventory, Admin/Kitchen UIs, and the mobile apps are built out
-phase by phase from here — see section 76 of the project brief and the
-phase list it defines.
+Phases 1–5 of the build are in place (see section 76 of the project
+brief for the full phase list):
+
+- **Phase 1 — Foundation**: monorepo, NestJS API, PostgreSQL schema,
+  Redis, JWT auth (customer OTP + staff password) with rotating refresh
+  tokens, RBAC via a global permissions guard, structured logging,
+  global error handling, health checks, Docker, CI.
+- **Phase 2 — Organization**: branches, staff, roles & permissions,
+  audit logging, with safety guards (can't deactivate your own account,
+  can't leave the org with zero active OWNERs).
+- **Phase 3 — Catalog**: categories, products, weight-based variants,
+  images, add-ons, price history, and the public browsing API.
+- **Phase 4 — Inventory**: stock, a transaction-safe reservation engine
+  (`SELECT ... FOR UPDATE`, proven under real concurrent load — see
+  `services/api/src/inventory/inventory-reservation.service.integration.spec.ts`),
+  adjustments, wastage, production batches.
+- **Phase 5 — Customer app**: `apps/customer-mobile` (Expo/React
+  Native) — onboarding, mobile OTP auth, home/category/search browsing,
+  product detail, a server-aware cart (`services/api/src/cart`) that
+  never trusts a cached price, and saved addresses.
+
+Orders/checkout, payments, delivery, coupons, notifications, reviews,
+the owner app, admin web, and the kitchen PWA are built out phase by
+phase from here.
