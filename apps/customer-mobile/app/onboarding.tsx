@@ -10,7 +10,7 @@ export default function OnboardingScreen() {
     <SafeAreaView style={styles.container} edges={["top", "bottom"]}>
       <View style={styles.hero}>
         <View style={styles.iconWrapper}>
-          <Ionicons name="restaurant" size={56} color={colors.primary} />
+          <Ionicons name="restaurant" size={52} color={colors.accentOnMaroon} />
         </View>
         <Text style={styles.title}>Shri Anandam</Text>
         <Text style={styles.subtitle}>Sweets & Restaurant</Text>
@@ -37,15 +37,15 @@ const styles = StyleSheet.create({
     width: 96,
     height: 96,
     borderRadius: 48,
-    backgroundColor: colors.surface,
+    backgroundColor: colors.maroon,
     alignItems: "center",
     justifyContent: "center",
     marginBottom: spacing.md,
   },
-  title: { ...typography.h1, color: colors.text },
+  title: { ...typography.display, fontSize: 30, color: colors.text },
   subtitle: { ...typography.body, color: colors.textMuted },
   body: { paddingHorizontal: spacing.md },
-  heading: { ...typography.h2, color: colors.text, textAlign: "center", marginBottom: spacing.sm },
+  heading: { ...typography.display, fontSize: 21, color: colors.text, textAlign: "center", marginBottom: spacing.sm },
   description: { ...typography.body, color: colors.textMuted, textAlign: "center" },
   footer: { paddingBottom: spacing.lg },
 });

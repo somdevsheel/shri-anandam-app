@@ -1,5 +1,5 @@
 import { ActivityIndicator, Pressable, StyleSheet, Text, type StyleProp, type ViewStyle } from "react-native";
-import { colors, radius, spacing, typography } from "@/theme/theme";
+import { colors, fonts, radius, spacing } from "@/theme/theme";
 
 interface ButtonProps {
   label: string;
@@ -40,7 +40,7 @@ export function Button({ label, onPress, variant = "primary", disabled, loading,
 
 const styles = StyleSheet.create({
   base: {
-    minHeight: 48,
+    minHeight: 50,
     borderRadius: radius.md,
     alignItems: "center",
     justifyContent: "center",
@@ -48,7 +48,9 @@ const styles = StyleSheet.create({
     flexDirection: "row",
   },
   label: {
-    ...typography.bodyBold,
+    fontFamily: fonts.sansBold,
+    fontSize: 15,
+    fontWeight: "700",
     color: colors.onPrimary,
   },
   outlineLabel: {

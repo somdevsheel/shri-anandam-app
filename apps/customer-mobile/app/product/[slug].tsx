@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { Image } from "expo-image";
-import { useLocalSearchParams, useNavigation } from "expo-router";
+import { useLocalSearchParams, useNavigation, router } from "expo-router";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { formatInr } from "@shri-anandam/shared-types";
 import { useProduct } from "@/api/hooks/use-catalog";
@@ -10,7 +11,7 @@ import { LoadingView } from "@/components/ui/LoadingView";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Button } from "@/components/ui/Button";
 import { ApiError } from "@/api/client";
-import { colors, radius, spacing, typography } from "@/theme/theme";
+import { colors, fonts, radius, spacing, typography } from "@/theme/theme";
 import type { ProductVariant } from "@/api/types";
 
 export default function ProductDetailScreen() {
@@ -18,14 +19,15 @@ export default function ProductDetailScreen() {
   const navigation = useNavigation();
   const { data: product, isLoading } = useProduct(slug);
   const addToCart = useAddCartItem();
+  const insets = useSafeAreaInsets();
 
   const [selectedVariantId, setSelectedVariantId] = useState<string | undefined>();
   const [selectedAddonIds, setSelectedAddonIds] = useState<Set<string>>(new Set());
   const [quantity, setQuantity] = useState(1);
 
   useEffect(() => {
-    navigation.setOptions({ title: product?.name ?? "" });
-  }, [navigation, product?.name]);
+    navigation.setOptions({ headerShown: false });
+  }, [navigation]);
 
   const activeVariants = useMemo(() => (product?.variants ?? []).filter((v) => v.isActive), [product]);
   const selectedVariant: ProductVariant | undefined =
@@ -84,108 +86,132 @@ export default function ProductDetailScreen() {
   };
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      {product.images[0] ? (
-        <Image source={{ uri: product.images[0].url }} style={styles.image} contentFit="cover" />
-      ) : (
-        <View style={[styles.image, styles.imagePlaceholder]} />
-      )}
-
-      <Text style={styles.name}>{product.name}</Text>
-      {product.description ? <Text style={styles.description}>{product.description}</Text> : null}
-
-      {product.allergens.length > 0 ? (
-        <View style={styles.allergenRow}>
-          <Ionicons name="warning-outline" size={16} color={colors.warning} />
-          <Text style={styles.allergenText}>Contains: {product.allergens.join(", ")}</Text>
+    <View style={styles.container}>
+      <ScrollView contentContainerStyle={styles.scrollContent}>
+        <View style={styles.heroWrapper}>
+          {product.images[0] ? (
+            <Image source={{ uri: product.images[0].url }} style={styles.hero} contentFit="cover" />
+          ) : (
+            <View style={[styles.hero, styles.heroPlaceholder]} />
+          )}
+          <Pressable
+            onPress={() => router.back()}
+            accessibilityRole="button"
+            accessibilityLabel="Back"
+            style={[styles.backButton, { top: insets.top + spacing.sm }]}
+          >
+            <Ionicons name="chevron-back" size={20} color={colors.text} />
+          </Pressable>
         </View>
-      ) : null}
 
-      {activeVariants.length > 0 ? (
-        <>
-          <Text style={styles.sectionTitle}>Choose size</Text>
-          <View style={styles.optionRow}>
-            {activeVariants.map((variant) => (
-              <Pressable
-                key={variant.id}
-                onPress={() => setSelectedVariantId(variant.id)}
-                style={[styles.optionChip, variant.id === selectedVariant?.id && styles.optionChipSelected]}
-                accessibilityRole="button"
-                accessibilityState={{ selected: variant.id === selectedVariant?.id }}
-              >
-                <Text style={[styles.optionLabel, variant.id === selectedVariant?.id && styles.optionLabelSelected]}>
-                  {variant.name}
-                </Text>
-                <Text style={[styles.optionPrice, variant.id === selectedVariant?.id && styles.optionLabelSelected]}>
-                  {variant.priceInPaise === null ? "Price coming soon" : formatInr(variant.priceInPaise)}
-                </Text>
-              </Pressable>
-            ))}
+        <View style={styles.content}>
+          <Text style={styles.eyebrow}>{product.category.name}</Text>
+          <Text style={styles.name}>{product.name}</Text>
+          {product.description ? <Text style={styles.description}>{product.description}</Text> : null}
+
+          {product.allergens.length > 0 ? (
+            <View style={styles.allergenRow}>
+              <Ionicons name="warning-outline" size={16} color={colors.warning} />
+              <Text style={styles.allergenText}>Contains: {product.allergens.join(", ")}</Text>
+            </View>
+          ) : null}
+
+          {activeVariants.length > 0 ? (
+            <>
+              <Text style={styles.sectionTitle}>Choose size</Text>
+              <View style={styles.optionRow}>
+                {activeVariants.map((variant) => (
+                  <Pressable
+                    key={variant.id}
+                    onPress={() => setSelectedVariantId(variant.id)}
+                    style={[styles.optionChip, variant.id === selectedVariant?.id && styles.optionChipSelected]}
+                    accessibilityRole="button"
+                    accessibilityState={{ selected: variant.id === selectedVariant?.id }}
+                  >
+                    <Text style={[styles.optionLabel, variant.id === selectedVariant?.id && styles.optionLabelSelected]}>
+                      {variant.name}
+                    </Text>
+                    <Text style={[styles.optionPrice, variant.id === selectedVariant?.id && styles.optionLabelSelected]}>
+                      {variant.priceInPaise === null ? "Price coming soon" : formatInr(variant.priceInPaise)}
+                    </Text>
+                  </Pressable>
+                ))}
+              </View>
+            </>
+          ) : (
+            <EmptyState icon="close-circle-outline" title="Currently unavailable" />
+          )}
+
+          {product.productAddons.length > 0 ? (
+            <>
+              <Text style={styles.sectionTitle}>Add-ons</Text>
+              <View style={styles.addonList}>
+                {product.productAddons.map(({ addon }) => {
+                  const checked = selectedAddonIds.has(addon.id);
+                  return (
+                    <Pressable
+                      key={addon.id}
+                      onPress={() => toggleAddon(addon.id)}
+                      style={[styles.addonRow, checked && styles.addonRowChecked]}
+                      accessibilityRole="checkbox"
+                      accessibilityState={{ checked }}
+                    >
+                      <View style={[styles.checkbox, checked && styles.checkboxChecked]}>
+                        {checked ? <Ionicons name="checkmark" size={13} color={colors.onPrimary} /> : null}
+                      </View>
+                      <Text style={styles.addonName}>{addon.name}</Text>
+                      <Text style={styles.addonPrice}>+{formatInr(addon.priceInPaise)}</Text>
+                    </Pressable>
+                  );
+                })}
+              </View>
+            </>
+          ) : null}
+
+          <Text style={styles.sectionTitle}>Quantity</Text>
+          <View style={styles.stepper}>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Decrease quantity"
+              onPress={() => setQuantity((q) => Math.max(selectedVariant?.minOrderQuantity ?? 1, q - 1))}
+              style={styles.stepperButton}
+            >
+              <Ionicons name="remove" size={18} color={colors.primary} />
+            </Pressable>
+            <Text style={styles.quantityText}>{quantity}</Text>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Increase quantity"
+              onPress={() => setQuantity((q) => Math.min(selectedVariant?.maxOrderQuantity ?? 99, q + 1))}
+              style={styles.stepperButton}
+            >
+              <Ionicons name="add" size={18} color={colors.primary} />
+            </Pressable>
           </View>
-        </>
-      ) : (
-        <EmptyState icon="close-circle-outline" title="Currently unavailable" />
-      )}
+          {selectedVariant && (selectedVariant.minOrderQuantity > 1 || selectedVariant.maxOrderQuantity) ? (
+            <Text style={styles.quantityHint}>
+              {selectedVariant.minOrderQuantity > 1 ? `Min ${selectedVariant.minOrderQuantity}` : ""}
+              {selectedVariant.minOrderQuantity > 1 && selectedVariant.maxOrderQuantity ? " · " : ""}
+              {selectedVariant.maxOrderQuantity ? `Max ${selectedVariant.maxOrderQuantity}` : ""}
+            </Text>
+          ) : null}
 
-      {product.productAddons.length > 0 ? (
-        <>
-          <Text style={styles.sectionTitle}>Add-ons</Text>
-          <View style={styles.optionRow}>
-            {product.productAddons.map(({ addon }) => (
-              <Pressable
-                key={addon.id}
-                onPress={() => toggleAddon(addon.id)}
-                style={[styles.optionChip, selectedAddonIds.has(addon.id) && styles.optionChipSelected]}
-                accessibilityRole="checkbox"
-                accessibilityState={{ checked: selectedAddonIds.has(addon.id) }}
-              >
-                <Text style={[styles.optionLabel, selectedAddonIds.has(addon.id) && styles.optionLabelSelected]}>
-                  {addon.name}
-                </Text>
-                <Text style={[styles.optionPrice, selectedAddonIds.has(addon.id) && styles.optionLabelSelected]}>
-                  +{formatInr(addon.priceInPaise)}
-                </Text>
-              </Pressable>
-            ))}
-          </View>
-        </>
-      ) : null}
+          {product.ingredients ? (
+            <View style={styles.ingredientsBlock}>
+              <Text style={styles.sectionTitle}>Ingredients</Text>
+              <Text style={styles.ingredientsText}>{product.ingredients}</Text>
+            </View>
+          ) : null}
+        </View>
+      </ScrollView>
 
-      <Text style={styles.sectionTitle}>Quantity</Text>
-      <View style={styles.stepper}>
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel="Decrease quantity"
-          onPress={() => setQuantity((q) => Math.max(selectedVariant?.minOrderQuantity ?? 1, q - 1))}
-          style={styles.stepperButton}
-        >
-          <Ionicons name="remove" size={18} color={colors.primary} />
-        </Pressable>
-        <Text style={styles.quantityText}>{quantity}</Text>
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel="Increase quantity"
-          onPress={() => setQuantity((q) => Math.min(selectedVariant?.maxOrderQuantity ?? 99, q + 1))}
-          style={styles.stepperButton}
-        >
-          <Ionicons name="add" size={18} color={colors.primary} />
-        </Pressable>
-      </View>
-      {selectedVariant && (selectedVariant.minOrderQuantity > 1 || selectedVariant.maxOrderQuantity) ? (
-        <Text style={styles.quantityHint}>
-          {selectedVariant.minOrderQuantity > 1 ? `Min ${selectedVariant.minOrderQuantity}` : ""}
-          {selectedVariant.minOrderQuantity > 1 && selectedVariant.maxOrderQuantity ? " · " : ""}
-          {selectedVariant.maxOrderQuantity ? `Max ${selectedVariant.maxOrderQuantity}` : ""}
-        </Text>
-      ) : null}
-
-      <View style={styles.footer}>
-        <View>
+      <View style={[styles.footer, { paddingBottom: Math.max(insets.bottom, spacing.lg) }]}>
+        <View style={styles.footerTotal}>
           <Text style={styles.totalLabel}>Total</Text>
           <Text style={styles.totalValue}>{totalPrice === null ? "TBD" : formatInr(totalPrice)}</Text>
         </View>
         <Button
-          label={!availableBranch ? "Not available" : isPriceTbd ? "Price coming soon" : "Add to Cart"}
+          label={!availableBranch ? "Not available" : isPriceTbd ? "Price coming soon" : "Add to cart"}
           onPress={handleAddToCart}
           disabled={!selectedVariant || !availableBranch || isPriceTbd}
           loading={addToCart.isPending}
@@ -193,16 +219,29 @@ export default function ProductDetailScreen() {
           testID="add-to-cart-button"
         />
       </View>
-    </ScrollView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.background },
-  content: { padding: spacing.lg, paddingBottom: spacing.xxl },
-  image: { width: "100%", aspectRatio: 1.2, borderRadius: radius.md, marginBottom: spacing.md },
-  imagePlaceholder: { backgroundColor: colors.border },
-  name: { ...typography.h2, color: colors.text },
+  scrollContent: { paddingBottom: spacing.xl },
+  heroWrapper: { position: "relative" },
+  hero: { width: "100%", aspectRatio: 1.4 },
+  heroPlaceholder: { backgroundColor: colors.border },
+  backButton: {
+    position: "absolute",
+    left: spacing.md,
+    width: 36,
+    height: 36,
+    borderRadius: radius.full,
+    backgroundColor: "rgba(255,248,240,0.94)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  content: { padding: spacing.lg },
+  eyebrow: { fontFamily: fonts.sansBold, fontSize: 10.5, fontWeight: "700", letterSpacing: 1.4, color: colors.primary, textTransform: "uppercase" },
+  name: { ...typography.display, fontSize: 24, color: colors.text, marginTop: spacing.xs },
   description: { ...typography.body, color: colors.textMuted, marginTop: spacing.xs },
   allergenRow: { flexDirection: "row", alignItems: "center", gap: spacing.xs, marginTop: spacing.sm },
   allergenText: { ...typography.caption, color: colors.warning },
@@ -215,33 +254,62 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.sm,
     paddingHorizontal: spacing.md,
     backgroundColor: colors.surface,
+    minWidth: 84,
   },
   optionChipSelected: { borderColor: colors.primary, backgroundColor: colors.primary },
   optionLabel: { ...typography.bodyBold, color: colors.text },
   optionLabelSelected: { color: colors.onPrimary },
   optionPrice: { ...typography.caption, color: colors.textMuted, marginTop: 2 },
+  addonList: { gap: spacing.sm },
+  addonRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.sm,
+    borderWidth: 1.5,
+    borderColor: colors.border,
+    borderRadius: radius.md,
+    backgroundColor: colors.surface,
+    padding: spacing.md,
+  },
+  addonRowChecked: { borderColor: colors.primary },
+  checkbox: {
+    width: 20,
+    height: 20,
+    borderRadius: 5,
+    borderWidth: 1.5,
+    borderColor: colors.disabled,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  checkboxChecked: { backgroundColor: colors.primary, borderColor: colors.primary },
+  addonName: { ...typography.bodyBold, color: colors.text, flex: 1 },
+  addonPrice: { ...typography.bodyBold, color: colors.text },
   stepper: { flexDirection: "row", alignItems: "center", gap: spacing.md },
   stepperButton: {
-    width: 36,
-    height: 36,
+    width: 40,
+    height: 40,
     borderRadius: radius.full,
-    borderWidth: 1,
+    borderWidth: 1.5,
     borderColor: colors.border,
     alignItems: "center",
     justifyContent: "center",
   },
   quantityText: { ...typography.h3, color: colors.text, minWidth: 24, textAlign: "center" },
   quantityHint: { ...typography.caption, color: colors.textMuted, marginTop: spacing.xs },
+  ingredientsBlock: { marginTop: spacing.lg, paddingTop: spacing.md, borderTopWidth: 1, borderTopColor: colors.border },
+  ingredientsText: { ...typography.body, color: colors.textMuted, marginTop: -spacing.xs },
   footer: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "space-between",
-    marginTop: spacing.xl,
-    paddingTop: spacing.lg,
+    gap: spacing.md,
+    padding: spacing.lg,
+    paddingBottom: spacing.lg,
     borderTopWidth: 1,
     borderTopColor: colors.border,
+    backgroundColor: colors.surface,
   },
+  footerTotal: {},
   totalLabel: { ...typography.caption, color: colors.textMuted },
   totalValue: { ...typography.h2, color: colors.text },
-  addButton: { minWidth: 170 },
+  addButton: { flex: 1 },
 });

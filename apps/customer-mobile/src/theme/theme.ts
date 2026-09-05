@@ -1,9 +1,8 @@
 /**
- * Shri Anandam brand palette and spacing scale. A real design pass
- * (illustration, iconography, typography licensing) happens with brand
- * assets that don't exist yet in this repo — these are the values every
- * screen imports so that pass is a one-file change, not a find-replace
- * across the app.
+ * Shri Anandam brand palette, spacing scale and type system — taken from
+ * the customer-app UI design pass (shri-anandam-customer-app.html). These
+ * are the values every screen imports so a future design refresh is a
+ * one-file change, not a find-replace across the app.
  */
 export const colors = {
   background: "#FFF8F0",
@@ -11,13 +10,16 @@ export const colors = {
   primary: "#B3541E", // warm terracotta — sweets-shop brand tone
   primaryDark: "#8A3F15",
   onPrimary: "#FFFFFF",
+  maroon: "#6E2318", // deep header/hero tone, paired with the gold accent below
   accent: "#D4A017", // festive gold accent
+  accentOnMaroon: "#E8C77A", // gold text/icons sitting on the maroon header
   text: "#2B2320",
   textMuted: "#7A6F68",
   border: "#EFE3D6",
   success: "#3D8B4C",
   danger: "#C0392B",
   warning: "#B7791F",
+  warningBackground: "#FBF0DD",
   disabled: "#D9CFC5",
 } as const;
 
@@ -37,12 +39,27 @@ export const radius = {
   full: 999,
 } as const;
 
+/**
+ * Font families loaded via @expo-google-fonts in app/_layout.tsx.
+ * `display` (Marcellus, a serif) is for screen titles and product names;
+ * `sans` (Manrope) is the body/UI workhorse and covers Devanagari, so a
+ * Hindi interface needs no second family.
+ */
+export const fonts = {
+  display: "Marcellus_400Regular",
+  sansRegular: "Manrope_400Regular",
+  sansMedium: "Manrope_500Medium",
+  sansSemiBold: "Manrope_600SemiBold",
+  sansBold: "Manrope_700Bold",
+} as const;
+
 export const typography = {
-  h1: { fontSize: 28, fontWeight: "700" as const },
-  h2: { fontSize: 22, fontWeight: "700" as const },
-  h3: { fontSize: 18, fontWeight: "600" as const },
-  body: { fontSize: 15, fontWeight: "400" as const },
-  bodyBold: { fontSize: 15, fontWeight: "600" as const },
-  caption: { fontSize: 13, fontWeight: "400" as const },
-  price: { fontSize: 17, fontWeight: "700" as const },
+  display: { fontSize: 26, fontFamily: fonts.display, fontWeight: "400" as const },
+  h1: { fontSize: 28, fontFamily: fonts.sansBold, fontWeight: "700" as const },
+  h2: { fontSize: 22, fontFamily: fonts.sansBold, fontWeight: "700" as const },
+  h3: { fontSize: 18, fontFamily: fonts.sansSemiBold, fontWeight: "600" as const },
+  body: { fontSize: 15, fontFamily: fonts.sansRegular, fontWeight: "400" as const },
+  bodyBold: { fontSize: 15, fontFamily: fonts.sansSemiBold, fontWeight: "600" as const },
+  caption: { fontSize: 13, fontFamily: fonts.sansRegular, fontWeight: "400" as const },
+  price: { fontSize: 17, fontFamily: fonts.sansBold, fontWeight: "700" as const },
 };

@@ -1,16 +1,17 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Alert, ScrollView, StyleSheet, Text, View } from "react-native";
-import { useLocalSearchParams, router } from "expo-router";
+import { useLocalSearchParams, useNavigation, router } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { formatInr, OrderStatus } from "@shri-anandam/shared-types";
 import { useCancelOrder, useOrder } from "@/api/hooks/use-orders";
 import { useRealtimeOrders } from "@/api/use-realtime";
 import { ApiError } from "@/api/client";
 import { StatusBadge } from "@/components/StatusBadge";
+import { OrderTimeline } from "@/components/OrderTimeline";
 import { Button } from "@/components/ui/Button";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { LoadingView } from "@/components/ui/LoadingView";
-import { colors, radius, spacing, typography } from "@/theme/theme";
+import { colors, fonts, radius, spacing, typography } from "@/theme/theme";
 import { formatDateTime } from "@/lib/format";
 
 const TERMINAL_STATUSES = new Set<string>([OrderStatus.DELIVERED, OrderStatus.REJECTED, OrderStatus.CANCELLED]);
@@ -24,11 +25,16 @@ const TERMINAL_STATUSES = new Set<string>([OrderStatus.DELIVERED, OrderStatus.RE
  */
 export default function OrderDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
+  const navigation = useNavigation();
   const { data: order, isLoading, error, refetch } = useOrder(id);
   const cancelOrder = useCancelOrder(id ?? "");
   const [cancelError, setCancelError] = useState<string | null>(null);
 
   useRealtimeOrders(() => void refetch());
+
+  useEffect(() => {
+    navigation.setOptions({ headerShown: false });
+  }, [navigation]);
 
   if (isLoading) return <LoadingView />;
   if (error || !order) return <EmptyState icon="alert-circle-outline" title="Couldn't load this order" />;
@@ -53,14 +59,23 @@ export default function OrderDetailScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.container} edges={["bottom"]}>
-      <ScrollView contentContainerStyle={styles.content}>
+    <SafeAreaView style={styles.container} edges={["top", "bottom"]}>
+      <View style={styles.header}>
         <View style={styles.headerRow}>
           <View>
-            <Text style={styles.orderNumber}>#{order.orderNumber}</Text>
-            <Text style={styles.placedAt}>Placed {formatDateTime(order.placedAt)}</Text>
+            <Text style={styles.headerTitle}>{canCancel ? "Tracking your order" : "Order details"}</Text>
+            <Text style={styles.headerMeta}>
+              #{order.orderNumber} · {formatDateTime(order.placedAt)}
+            </Text>
           </View>
           <StatusBadge status={order.status} />
+        </View>
+      </View>
+
+      <ScrollView contentContainerStyle={styles.content}>
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Status</Text>
+          <OrderTimeline order={order} />
         </View>
 
         <View style={styles.section}>
@@ -114,19 +129,6 @@ export default function OrderDetailScreen() {
           ))}
         </View>
 
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Status History</Text>
-          {order.statusHistory.map((entry) => (
-            <View key={entry.id} style={styles.historyRow}>
-              <View style={styles.historyDot} />
-              <View style={{ flex: 1 }}>
-                <Text style={styles.itemName}>{entry.newStatus}</Text>
-                <Text style={styles.itemVariant}>{formatDateTime(entry.createdAt)}</Text>
-              </View>
-            </View>
-          ))}
-        </View>
-
         {cancelError ? <Text style={styles.error}>{cancelError}</Text> : null}
         {canCancel ? (
           <Button label="Cancel Order" variant="danger" onPress={handleCancel} loading={cancelOrder.isPending} style={styles.cancelButton} />
@@ -148,10 +150,11 @@ function TotalsRow({ label, value, bold }: { label: string; value: number; bold?
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.background },
-  content: { padding: spacing.lg, paddingBottom: spacing.xl, gap: spacing.md },
+  header: { backgroundColor: colors.maroon, paddingHorizontal: spacing.lg, paddingVertical: spacing.md },
   headerRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start" },
-  orderNumber: { ...typography.h2, color: colors.text },
-  placedAt: { ...typography.caption, color: colors.textMuted, marginTop: 2 },
+  headerTitle: { ...typography.display, fontSize: 20, color: colors.background },
+  headerMeta: { fontFamily: fonts.sansMedium, fontSize: 12, color: colors.accentOnMaroon, marginTop: 5 },
+  content: { padding: spacing.lg, paddingBottom: spacing.xl, gap: spacing.md },
   section: {
     backgroundColor: colors.surface,
     borderRadius: radius.md,
@@ -167,8 +170,6 @@ const styles = StyleSheet.create({
   divider: { height: 1, backgroundColor: colors.border, marginVertical: spacing.sm },
   totalsRow: { flexDirection: "row", justifyContent: "space-between", marginBottom: 2 },
   bodyText: { ...typography.body, color: colors.text },
-  historyRow: { flexDirection: "row", gap: spacing.sm, alignItems: "flex-start", marginBottom: spacing.sm },
-  historyDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: colors.primary, marginTop: 6 },
   error: { ...typography.body, color: colors.danger },
   cancelButton: { marginTop: spacing.xs },
 });

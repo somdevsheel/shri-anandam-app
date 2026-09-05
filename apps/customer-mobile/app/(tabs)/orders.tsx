@@ -20,7 +20,7 @@ export default function OrdersScreen() {
 
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
-      <Text style={styles.title}>Your Orders</Text>
+      <Text style={styles.title}>Your orders</Text>
 
       {error ? (
         <EmptyState icon="alert-circle-outline" title="Couldn't load your orders" message="Pull down to try again." />
@@ -61,7 +61,7 @@ function OrderRow({ order }: { order: Order }) {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.background },
-  title: { ...typography.h2, color: colors.text, paddingHorizontal: spacing.lg, paddingTop: spacing.sm, marginBottom: spacing.sm },
+  title: { ...typography.display, fontSize: 22, color: colors.text, paddingHorizontal: spacing.lg, paddingTop: spacing.sm, marginBottom: spacing.sm },
   listContent: { padding: spacing.lg, paddingTop: 0, flexGrow: 1 },
   card: {
     backgroundColor: colors.surface,

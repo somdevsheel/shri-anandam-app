@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { ScrollView, StyleSheet, Text, View } from "react-native";
+import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { router } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
@@ -13,7 +13,7 @@ import { AddressCard } from "@/components/AddressCard";
 import { Button } from "@/components/ui/Button";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { LoadingView } from "@/components/ui/LoadingView";
-import { colors, radius, spacing, typography } from "@/theme/theme";
+import { colors, fonts, radius, spacing, typography } from "@/theme/theme";
 
 type FulfillmentType = "DELIVERY" | "PICKUP";
 
@@ -73,7 +73,7 @@ export default function CheckoutScreen() {
     createOrder.mutate(
       { dto: result.data, idempotencyKey },
       {
-        onSuccess: (order) => router.replace(`/order/${order.id}`),
+        onSuccess: (order) => router.replace(`/order-success/${order.id}`),
         onError: (err) => setError(err instanceof ApiError ? err.message : "Could not place your order. Please try again."),
       },
     );
@@ -86,21 +86,21 @@ export default function CheckoutScreen() {
       <ScrollView contentContainerStyle={styles.content}>
         <Text style={styles.sectionTitle}>Fulfillment</Text>
         <View style={styles.optionRow}>
-          <OptionPill label="Pickup" icon="storefront-outline" selected={fulfillmentType === "PICKUP"} onPress={() => setFulfillmentType("PICKUP")} />
-          <OptionPill label="Delivery" icon="bicycle-outline" selected={fulfillmentType === "DELIVERY"} onPress={() => setFulfillmentType("DELIVERY")} />
+          <SelectCard label="Pickup" note="Collect from the branch" icon="storefront-outline" selected={fulfillmentType === "PICKUP"} onPress={() => setFulfillmentType("PICKUP")} />
+          <SelectCard label="Delivery" note="Sent to your address" icon="bicycle-outline" selected={fulfillmentType === "DELIVERY"} onPress={() => setFulfillmentType("DELIVERY")} />
         </View>
 
         {fulfillmentType === "PICKUP" ? (
-          <View style={styles.infoBox}>
-            <Ionicons name="location-outline" size={16} color={colors.textMuted} />
-            <Text style={styles.infoBoxText}>Pickup from {cart.branch.name}</Text>
+          <View style={styles.infoCard}>
+            <Ionicons name="location-outline" size={18} color={colors.textMuted} />
+            <Text style={styles.infoCardText}>Pickup from {cart.branch.name}</Text>
           </View>
         ) : (
           <>
-            <Text style={styles.sectionTitle}>Delivery Address</Text>
+            <Text style={styles.sectionTitle}>Delivery address</Text>
             {!addresses || addresses.length === 0 ? (
-              <View style={styles.infoBox}>
-                <Text style={styles.infoBoxText}>You don't have any saved addresses yet.</Text>
+              <View style={styles.infoCard}>
+                <Text style={styles.infoCardText}>You don't have any saved addresses yet.</Text>
               </View>
             ) : (
               addresses.map((address) => (
@@ -112,14 +112,14 @@ export default function CheckoutScreen() {
                 />
               ))
             )}
-            <Button label="Add New Address" variant="outline" onPress={() => router.push("/addresses/new")} />
+            <Button label="Add new address" variant="outline" onPress={() => router.push("/addresses/new")} />
           </>
         )}
 
-        <Text style={styles.sectionTitle}>Payment Method</Text>
+        <Text style={styles.sectionTitle}>Payment method</Text>
         <View style={styles.optionRow}>
-          <OptionPill label="Cash on Delivery" icon="cash-outline" selected={paymentMethod === PaymentMethod.COD} onPress={() => setPaymentMethod(PaymentMethod.COD)} />
-          <OptionPill label="Pay at Store" icon="storefront-outline" selected={paymentMethod === PaymentMethod.PAY_AT_STORE} onPress={() => setPaymentMethod(PaymentMethod.PAY_AT_STORE)} />
+          <SelectCard label="Cash on delivery" note="Pay the rider in cash" icon="cash-outline" selected={paymentMethod === PaymentMethod.COD} onPress={() => setPaymentMethod(PaymentMethod.COD)} />
+          <SelectCard label="Pay at store" note="Settle at the counter" icon="storefront-outline" selected={paymentMethod === PaymentMethod.PAY_AT_STORE} onPress={() => setPaymentMethod(PaymentMethod.PAY_AT_STORE)} />
         </View>
 
         <View style={styles.summaryCard}>
@@ -135,7 +135,7 @@ export default function CheckoutScreen() {
 
       <View style={styles.footer}>
         <Button
-          label="Place Order"
+          label="Place order"
           onPress={handlePlaceOrder}
           loading={createOrder.isPending}
           disabled={deliveryBlocked}
@@ -146,34 +146,61 @@ export default function CheckoutScreen() {
   );
 }
 
-function OptionPill({
+function SelectCard({
   label,
+  note,
   icon,
   selected,
   onPress,
 }: {
   label: string;
+  note: string;
   icon: keyof typeof Ionicons.glyphMap;
   selected: boolean;
   onPress: () => void;
 }) {
   return (
-    <Button
-      label={label}
-      variant={selected ? "primary" : "outline"}
+    <Pressable
       onPress={onPress}
-      style={styles.pill}
-    />
+      accessibilityRole="radio"
+      accessibilityState={{ checked: selected }}
+      style={[styles.selectCard, selected && styles.selectCardSelected]}
+    >
+      <Ionicons name={icon} size={18} color={selected ? colors.primary : colors.textMuted} />
+      <Text style={[styles.selectCardLabel, selected && styles.selectCardLabelSelected]}>{label}</Text>
+      <Text style={styles.selectCardNote}>{note}</Text>
+    </Pressable>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.background },
   content: { padding: spacing.lg, paddingBottom: spacing.xl, gap: spacing.sm },
-  sectionTitle: { ...typography.h3, color: colors.text, marginTop: spacing.md, marginBottom: spacing.xs },
-  optionRow: { flexDirection: "row", gap: spacing.sm, flexWrap: "wrap" },
-  pill: { flex: 1, minWidth: 150 },
-  infoBox: {
+  sectionTitle: {
+    fontFamily: fonts.sansBold,
+    fontSize: 11,
+    fontWeight: "700",
+    letterSpacing: 1.2,
+    color: colors.textMuted,
+    textTransform: "uppercase",
+    marginTop: spacing.md,
+    marginBottom: spacing.xs,
+  },
+  optionRow: { flexDirection: "row", gap: spacing.sm },
+  selectCard: {
+    flex: 1,
+    borderWidth: 1.5,
+    borderColor: colors.border,
+    borderRadius: radius.md,
+    backgroundColor: colors.surface,
+    padding: spacing.md,
+    gap: 4,
+  },
+  selectCardSelected: { borderColor: colors.primary, backgroundColor: colors.warningBackground },
+  selectCardLabel: { ...typography.bodyBold, color: colors.text },
+  selectCardLabelSelected: { color: colors.text },
+  selectCardNote: { ...typography.caption, color: colors.textMuted },
+  infoCard: {
     flexDirection: "row",
     alignItems: "center",
     gap: spacing.xs,
@@ -183,7 +210,7 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
     padding: spacing.md,
   },
-  infoBoxText: { ...typography.body, color: colors.textMuted, flex: 1 },
+  infoCardText: { ...typography.body, color: colors.textMuted, flex: 1 },
   summaryCard: {
     marginTop: spacing.lg,
     backgroundColor: colors.surface,

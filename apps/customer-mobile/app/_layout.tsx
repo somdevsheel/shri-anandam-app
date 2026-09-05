@@ -3,6 +3,8 @@ import { Stack } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { SafeAreaProvider } from "react-native-safe-area-context";
+import { useFonts, Manrope_400Regular, Manrope_500Medium, Manrope_600SemiBold, Manrope_700Bold } from "@expo-google-fonts/manrope";
+import { Marcellus_400Regular } from "@expo-google-fonts/marcellus";
 import { queryClient } from "@/api/query-client";
 import { useAuthStore } from "@/lib/auth-store";
 import { LoadingView } from "@/components/ui/LoadingView";
@@ -10,6 +12,13 @@ import { colors } from "@/theme/theme";
 
 export default function RootLayout() {
   const isHydrated = useAuthStore((s) => s.isHydrated);
+  const [fontsLoaded] = useFonts({
+    Manrope_400Regular,
+    Manrope_500Medium,
+    Manrope_600SemiBold,
+    Manrope_700Bold,
+    Marcellus_400Regular,
+  });
 
   useEffect(() => {
     // Reads whatever's in SecureStore once at startup — see auth-store.ts.
@@ -19,7 +28,7 @@ export default function RootLayout() {
     void useAuthStore.getState().hydrate();
   }, []);
 
-  if (!isHydrated) {
+  if (!isHydrated || !fontsLoaded) {
     return <LoadingView />;
   }
 
@@ -41,6 +50,7 @@ export default function RootLayout() {
           <Stack.Screen name="(auth)" />
           <Stack.Screen name="product/[slug]" options={{ headerShown: true, title: "" }} />
           <Stack.Screen name="checkout" options={{ headerShown: true, title: "Checkout" }} />
+          <Stack.Screen name="order-success/[id]" options={{ headerShown: false, gestureEnabled: false }} />
           <Stack.Screen name="order/[id]" options={{ headerShown: true, title: "Order" }} />
           <Stack.Screen name="category/[slug]" options={{ headerShown: true }} />
           <Stack.Screen name="addresses/index" options={{ headerShown: true, title: "Your addresses" }} />

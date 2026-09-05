@@ -73,7 +73,7 @@ export default function OtpVerifyScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.background, padding: spacing.lg, paddingTop: spacing.xl },
-  heading: { ...typography.h2, color: colors.text, marginBottom: spacing.xs },
+  heading: { ...typography.display, fontSize: 21, color: colors.text, marginBottom: spacing.xs },
   subheading: { ...typography.body, color: colors.textMuted, marginBottom: spacing.lg },
   resendButton: { marginTop: spacing.md },
 });

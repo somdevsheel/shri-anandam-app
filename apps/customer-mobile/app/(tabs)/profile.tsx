@@ -9,7 +9,13 @@ import { LoadingView } from "@/components/ui/LoadingView";
 import { useProfile, useUpdateProfile } from "@/api/hooks/use-customer";
 import { useLogout } from "@/api/hooks/use-auth";
 import { ApiError } from "@/api/client";
-import { colors, radius, spacing, typography } from "@/theme/theme";
+import { colors, fonts, radius, spacing, typography } from "@/theme/theme";
+
+function initialsOf(name: string | null | undefined): string {
+  if (!name) return "?";
+  const parts = name.trim().split(/\s+/);
+  return ((parts[0]?.[0] ?? "") + (parts[1]?.[0] ?? "")).toUpperCase() || "?";
+}
 
 export default function ProfileScreen() {
   const { data: profile, isLoading } = useProfile();
@@ -54,9 +60,23 @@ export default function ProfileScreen() {
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
       <ScrollView contentContainerStyle={styles.content}>
-        <Text style={styles.heading}>Your profile</Text>
-        <Text style={styles.mobileNumber}>{profile.mobileNumber}</Text>
+        <View style={styles.identity}>
+          <View style={styles.avatar}>
+            <Text style={styles.avatarText}>{initialsOf(profile.name)}</Text>
+          </View>
+          <View style={{ flex: 1, minWidth: 0 }}>
+            <Text style={styles.name}>{profile.name || "Your profile"}</Text>
+            <Text style={styles.mobileNumber}>{profile.mobileNumber}</Text>
+          </View>
+        </View>
 
+        <View style={styles.linkGroup}>
+          <ProfileRow icon="location-outline" label="Saved addresses" onPress={() => router.push("/addresses")} />
+          <View style={styles.linkDivider} />
+          <ProfileRow icon="receipt-outline" label="Order history" onPress={() => router.push("/(tabs)/orders")} />
+        </View>
+
+        <Text style={styles.sectionTitle}>Edit details</Text>
         <TextField label="Name" placeholder="Your name" value={displayName} onChangeText={setName} />
         <TextField
           label="Email"
@@ -69,12 +89,6 @@ export default function ProfileScreen() {
         />
         {isDirty ? <Button label="Save changes" onPress={handleSave} loading={updateProfile.isPending} /> : null}
 
-        <Pressable style={styles.linkRow} onPress={() => router.push("/addresses")} accessibilityRole="button">
-          <Ionicons name="location-outline" size={20} color={colors.text} />
-          <Text style={styles.linkText}>Saved addresses</Text>
-          <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
-        </Pressable>
-
         <View style={styles.spacer} />
         <Button label="Log out" onPress={handleLogout} variant="danger" loading={logout.isPending} />
       </ScrollView>
@@ -82,22 +96,55 @@ export default function ProfileScreen() {
   );
 }
 
+function ProfileRow({ icon, label, onPress }: { icon: keyof typeof Ionicons.glyphMap; label: string; onPress: () => void }) {
+  return (
+    <Pressable style={styles.linkRow} onPress={onPress} accessibilityRole="button">
+      <Ionicons name={icon} size={19} color={colors.text} />
+      <Text style={styles.linkText}>{label}</Text>
+      <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
+    </Pressable>
+  );
+}
+
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.background },
   content: { padding: spacing.lg },
-  heading: { ...typography.h2, color: colors.text },
-  mobileNumber: { ...typography.body, color: colors.textMuted, marginBottom: spacing.lg },
+  identity: { flexDirection: "row", alignItems: "center", gap: spacing.md, marginBottom: spacing.lg },
+  avatar: {
+    width: 56,
+    height: 56,
+    borderRadius: radius.full,
+    backgroundColor: colors.maroon,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  avatarText: { fontFamily: fonts.sansBold, fontSize: 19, fontWeight: "700", color: colors.accentOnMaroon },
+  name: { ...typography.display, fontSize: 20, color: colors.text },
+  mobileNumber: { ...typography.body, color: colors.textMuted, marginTop: 2 },
+  linkGroup: {
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surface,
+    overflow: "hidden",
+    marginBottom: spacing.lg,
+  },
   linkRow: {
     flexDirection: "row",
     alignItems: "center",
     gap: spacing.sm,
-    backgroundColor: colors.surface,
-    borderRadius: radius.md,
     padding: spacing.md,
-    borderWidth: 1,
-    borderColor: colors.border,
-    marginTop: spacing.md,
   },
+  linkDivider: { height: 1, backgroundColor: colors.border },
   linkText: { ...typography.bodyBold, color: colors.text, flex: 1 },
+  sectionTitle: {
+    fontFamily: fonts.sansBold,
+    fontSize: 11,
+    fontWeight: "700",
+    letterSpacing: 1.2,
+    color: colors.textMuted,
+    textTransform: "uppercase",
+    marginBottom: spacing.sm,
+  },
   spacer: { height: spacing.xl },
 });
