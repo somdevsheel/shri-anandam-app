@@ -240,6 +240,18 @@ export interface Branch {
   longitude: number | null;
 }
 
+export interface DeliveryZone {
+  id: string;
+  branchId: string;
+  name: string;
+  pincodes: string[];
+  minOrderInPaise: Paise;
+  deliveryFeeInPaise: Paise;
+  freeDeliveryThresholdInPaise: Paise | null;
+  isActive: boolean;
+  createdAt: string;
+}
+
 export interface Coupon {
   id: string;
   code: string;
