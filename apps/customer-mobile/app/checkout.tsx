@@ -10,6 +10,7 @@ import { useAddresses } from "@/api/hooks/use-customer";
 import { useCreateOrder } from "@/api/hooks/use-orders";
 import { useApplyCoupon } from "@/api/hooks/use-coupons";
 import { ApiError } from "@/api/client";
+import { randomUUID } from "@/lib/uuid";
 import { AddressCard } from "@/components/AddressCard";
 import { Button } from "@/components/ui/Button";
 import { EmptyState } from "@/components/ui/EmptyState";
@@ -48,7 +49,7 @@ export default function CheckoutScreen() {
   // Generated once per mount, reused across retries of the SAME attempt
   // (section 11) — a network-timeout retry with this key hits the
   // server's idempotent replay path instead of creating a second order.
-  const [idempotencyKey] = useState(() => crypto.randomUUID());
+  const [idempotencyKey] = useState(() => randomUUID());
 
   if (cartLoading || addressesLoading) return <LoadingView />;
 
