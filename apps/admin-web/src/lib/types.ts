@@ -146,15 +146,42 @@ export interface Category {
   isActive: boolean;
 }
 
+export type ProductUnit =
+  | "PIECE"
+  | "PLATE"
+  | "HALF_PLATE"
+  | "FULL_PLATE"
+  | "GRAM"
+  | "KILOGRAM"
+  | "ML"
+  | "LITRE"
+  | "BOX"
+  | "PACKET";
+
+export interface BranchVariantAvailability {
+  id: string;
+  branchId: string;
+  productVariantId: string;
+  isActive: boolean;
+  branch: Branch;
+}
+
 export interface ProductVariant {
   id: string;
   productId: string;
   name: string;
   sku: string;
   weightGrams: string | null;
-  priceInPaise: Paise;
+  unit: ProductUnit;
+  quantity: string;
+  /** null = "TBD" — no real price set yet, see the backend's own schema comment. */
+  priceInPaise: Paise | null;
   compareAtPriceInPaise: Paise | null;
+  gstRatePercent: string | null;
+  minOrderQuantity: number;
+  maxOrderQuantity: number | null;
   isActive: boolean;
+  branchVariants: BranchVariantAvailability[];
 }
 
 export interface ProductImage {

@@ -11,9 +11,13 @@ interface ProductCardProps {
 
 /** The card used in every product grid (Home's featured rail, category listing, search results). */
 export function ProductCard({ product }: ProductCardProps) {
-  const cheapestVariant = product.variants
-    .filter((v) => v.isActive)
+  const activeVariants = product.variants.filter((v) => v.isActive);
+  const cheapestVariant = activeVariants
+    .filter((v): v is typeof v & { priceInPaise: number } => v.priceInPaise !== null)
     .sort((a, b) => a.priceInPaise - b.priceInPaise)[0];
+  // Distinct from "no active variant at all" — this one has a real
+  // sellable option, the admin just hasn't set its price yet.
+  const isPriceTbd = activeVariants.length > 0 && !cheapestVariant;
   const image = product.images[0];
 
   return (
@@ -31,6 +35,8 @@ export function ProductCard({ product }: ProductCardProps) {
         </Text>
         {cheapestVariant ? (
           <PriceTag priceInPaise={cheapestVariant.priceInPaise} compareAtPriceInPaise={cheapestVariant.compareAtPriceInPaise} />
+        ) : isPriceTbd ? (
+          <Text style={styles.unavailable}>Price coming soon</Text>
         ) : (
           <Text style={styles.unavailable}>Currently unavailable</Text>
         )}

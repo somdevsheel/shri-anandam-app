@@ -3,6 +3,7 @@ import type { Request } from "express";
 import {
   assignProductAddonsSchema,
   assignProductBranchesSchema,
+  assignVariantBranchesSchema,
   createProductImageSchema,
   createProductSchema,
   createProductVariantSchema,
@@ -12,6 +13,7 @@ import {
   uuidSchema,
   type AssignProductAddonsDto,
   type AssignProductBranchesDto,
+  type AssignVariantBranchesDto,
   type CreateProductDto,
   type CreateProductImageDto,
   type CreateProductVariantDto,
@@ -151,5 +153,17 @@ export class ProductsController {
     @Req() req: Request,
   ) {
     return this.products.assignBranches(productId, body, user, requestContext(req));
+  }
+
+  @Patch(":id/variants/:variantId/branches")
+  @RequirePermissions(Permission.PRODUCT_UPDATE)
+  assignVariantBranches(
+    @Param("id", new ZodValidationPipe(uuidSchema)) productId: string,
+    @Param("variantId", new ZodValidationPipe(uuidSchema)) variantId: string,
+    @Body(new ZodValidationPipe(assignVariantBranchesSchema)) body: AssignVariantBranchesDto,
+    @CurrentUser() user: AuthenticatedStaff,
+    @Req() req: Request,
+  ) {
+    return this.products.assignVariantBranches(productId, variantId, body, user, requestContext(req));
   }
 }

@@ -19,7 +19,13 @@ const CART_INCLUDE = {
 
 export interface CartLineIssue {
   cartItemId: string;
-  code: "PRODUCT_UNAVAILABLE" | "VARIANT_UNAVAILABLE" | "NOT_SOLD_AT_BRANCH" | "INSUFFICIENT_STOCK" | "ADDON_UNAVAILABLE";
+  code:
+    | "PRODUCT_UNAVAILABLE"
+    | "VARIANT_UNAVAILABLE"
+    | "NOT_SOLD_AT_BRANCH"
+    | "INSUFFICIENT_STOCK"
+    | "ADDON_UNAVAILABLE"
+    | "PRICE_NOT_SET";
   message: string;
 }
 
@@ -59,6 +65,13 @@ export class CartService {
     if (!variant || !variant.isActive || variant.productId !== dto.productId) {
       throw new ValidationError("Variant is not available", [{ field: "variantId", message: "Unknown or inactive variant" }]);
     }
+    if (variant.priceInPaise === null) {
+      // "TBD" — the admin hasn't set a real price yet. Never let this
+      // reach a cart/order regardless of what the browsing screens show.
+      throw new ValidationError("This item's price hasn't been set yet — it can't be ordered", [
+        { field: "variantId", message: "Price not configured" },
+      ]);
+    }
 
     let cart = await this.prisma.cart.findUnique({ where: { customerId } });
     const branchId = cart?.branchId;
@@ -74,6 +87,33 @@ export class CartService {
     if (!branchProduct || !branchProduct.isActive) {
       throw new ValidationError("This product isn't sold at the selected branch", [
         { field: "productId", message: "Not available at this branch" },
+      ]);
+    }
+
+    // Variant-level branch availability is opt-in: a variant with no
+    // BranchProductVariant rows at all is available at every branch the
+    // product itself is assigned to (matches the pre-existing behavior
+    // before this table existed — most products/variants will never
+    // need a per-branch override). Only once a variant has at least one
+    // row does branch assignment become an explicit allow-list.
+    const variantBranchRows = await this.prisma.branchProductVariant.findMany({ where: { productVariantId: dto.variantId } });
+    if (variantBranchRows.length > 0) {
+      const allowedHere = variantBranchRows.find((bv) => bv.branchId === dto.branchId);
+      if (!allowedHere || !allowedHere.isActive) {
+        throw new ValidationError("This option isn't sold at the selected branch", [
+          { field: "variantId", message: "Not available at this branch" },
+        ]);
+      }
+    }
+
+    if (dto.quantity < variant.minOrderQuantity) {
+      throw new ValidationError(`Minimum order quantity for this item is ${variant.minOrderQuantity}`, [
+        { field: "quantity", message: `Must be at least ${variant.minOrderQuantity}` },
+      ]);
+    }
+    if (variant.maxOrderQuantity !== null && dto.quantity > variant.maxOrderQuantity) {
+      throw new ValidationError(`Maximum order quantity for this item is ${variant.maxOrderQuantity}`, [
+        { field: "quantity", message: `Must be at most ${variant.maxOrderQuantity}` },
       ]);
     }
 
@@ -98,9 +138,15 @@ export class CartService {
       const existingLine = await this.findMatchingLine(tx, cart.id, dto.variantId, sortedAddonIds, dto.specialInstructions);
 
       if (existingLine) {
+        const combinedQuantity = existingLine.quantity + dto.quantity;
+        if (variant.maxOrderQuantity !== null && combinedQuantity > variant.maxOrderQuantity) {
+          throw new ValidationError(`Maximum order quantity for this item is ${variant.maxOrderQuantity}`, [
+            { field: "quantity", message: `Must be at most ${variant.maxOrderQuantity} in total` },
+          ]);
+        }
         await tx.cartItem.update({
           where: { id: existingLine.id },
-          data: { quantity: existingLine.quantity + dto.quantity },
+          data: { quantity: combinedQuantity },
         });
       } else {
         await tx.cartItem.create({
@@ -122,6 +168,20 @@ export class CartService {
 
   async updateItem(customerId: string, cartItemId: string, dto: UpdateCartItemDto) {
     const item = await this.getOwnedItem(customerId, cartItemId);
+
+    if (dto.quantity !== undefined) {
+      const variant = await this.prisma.productVariant.findUniqueOrThrow({ where: { id: item.variantId } });
+      if (dto.quantity < variant.minOrderQuantity) {
+        throw new ValidationError(`Minimum order quantity for this item is ${variant.minOrderQuantity}`, [
+          { field: "quantity", message: `Must be at least ${variant.minOrderQuantity}` },
+        ]);
+      }
+      if (variant.maxOrderQuantity !== null && dto.quantity > variant.maxOrderQuantity) {
+        throw new ValidationError(`Maximum order quantity for this item is ${variant.maxOrderQuantity}`, [
+          { field: "quantity", message: `Must be at most ${variant.maxOrderQuantity}` },
+        ]);
+      }
+    }
 
     if (dto.addonIds) {
       const addons = await this.prisma.addon.findMany({ where: { id: { in: dto.addonIds } } });
@@ -234,19 +294,34 @@ export class CartService {
           });
         }
 
+        // Guarded even though addItem() refuses to add a TBD-priced
+        // variant in the first place — an admin can still clear an
+        // already-in-someone's-cart variant's price back to TBD later.
+        // Matches this method's own "never throw, surface as an issue"
+        // rule: excluded from the subtotal rather than crashing the
+        // whole cart read.
+        if (item.variant.priceInPaise === null) {
+          issues.push({ cartItemId: item.id, code: "PRICE_NOT_SET", message: `${item.variant.name}'s price hasn't been set yet — remove it to check out` });
+        }
+
         const addonTotalInPaise = item.addons.reduce((sum, a) => sum + a.addon.priceInPaise, 0);
-        const lineTotalInPaise = (item.variant.priceInPaise + addonTotalInPaise) * item.quantity;
+        const lineTotalInPaise = item.variant.priceInPaise === null ? 0 : (item.variant.priceInPaise + addonTotalInPaise) * item.quantity;
         subtotalInPaise += lineTotalInPaise;
         itemCount += item.quantity;
 
         return {
           id: item.id,
           product: { id: item.product.id, name: item.product.name, slug: item.product.slug },
-          variant: { id: item.variant.id, name: item.variant.name, priceInPaise: item.variant.priceInPaise },
+          variant: {
+            id: item.variant.id,
+            name: item.variant.name,
+            priceInPaise: item.variant.priceInPaise,
+            gstRatePercent: item.variant.gstRatePercent,
+          },
           addons: item.addons.map((a) => ({ id: a.addon.id, name: a.addon.name, priceInPaise: a.addon.priceInPaise })),
           quantity: item.quantity,
           specialInstructions: item.specialInstructions,
-          unitPriceInPaise: item.variant.priceInPaise + addonTotalInPaise,
+          unitPriceInPaise: item.variant.priceInPaise === null ? null : item.variant.priceInPaise + addonTotalInPaise,
           lineTotalInPaise,
         };
       }),

@@ -10,6 +10,7 @@ import type { AuthenticatedStaff } from "../auth/types/authenticated-user.type";
 import type {
   AssignProductAddonsDto,
   AssignProductBranchesDto,
+  AssignVariantBranchesDto,
   CreateProductDto,
   CreateProductImageDto,
   CreateProductVariantDto,
@@ -25,7 +26,10 @@ interface RequestContext {
 
 const PRODUCT_DETAIL_INCLUDE = {
   category: true,
-  variants: { orderBy: { priceInPaise: "asc" } },
+  variants: {
+    orderBy: { priceInPaise: "asc" },
+    include: { branchVariants: { include: { branch: true } } },
+  },
   images: { orderBy: { sortOrder: "asc" } },
   productAddons: { include: { addon: true } },
   branchProducts: { include: { branch: true } },
@@ -228,8 +232,13 @@ export class ProductsService {
           name: dto.name,
           sku: dto.sku,
           weightGrams: dto.weightGrams,
+          unit: dto.unit,
+          quantity: dto.quantity,
           priceInPaise: dto.priceInPaise,
           compareAtPriceInPaise: dto.compareAtPriceInPaise,
+          gstRatePercent: dto.gstRatePercent,
+          minOrderQuantity: dto.minOrderQuantity,
+          maxOrderQuantity: dto.maxOrderQuantity,
         },
       });
 
@@ -266,8 +275,13 @@ export class ProductsService {
         data: {
           name: dto.name,
           weightGrams: dto.weightGrams,
+          unit: dto.unit,
+          quantity: dto.quantity,
           priceInPaise: dto.priceInPaise,
           compareAtPriceInPaise: dto.compareAtPriceInPaise,
+          gstRatePercent: dto.gstRatePercent,
+          minOrderQuantity: dto.minOrderQuantity,
+          maxOrderQuantity: dto.maxOrderQuantity,
           isActive: dto.isActive,
         },
       });
@@ -278,15 +292,23 @@ export class ProductsService {
         // this specific variant) and once in the general AuditLog (drives
         // the org-wide "sensitive actions" audit trail). Both are
         // populated from the same transaction so they can never disagree.
-        await tx.priceHistory.create({
-          data: {
-            variantId,
-            oldPriceInPaise: existing.priceInPaise,
-            newPriceInPaise: variant.priceInPaise,
-            changedByStaffId: actor.id,
-            reason: dto.priceChangeReason,
-          },
-        });
+        //
+        // PriceHistory's columns are non-null Ints — a real number-to-
+        // number change. A transition to/from "TBD" (null) is a
+        // different kind of event ("price set"/"price unset", not "price
+        // moved from ₹X to ₹Y") and isn't written here, only to the
+        // AuditLog below, which fires unconditionally either way.
+        if (existing.priceInPaise !== null && variant.priceInPaise !== null) {
+          await tx.priceHistory.create({
+            data: {
+              variantId,
+              oldPriceInPaise: existing.priceInPaise,
+              newPriceInPaise: variant.priceInPaise,
+              changedByStaffId: actor.id,
+              reason: dto.priceChangeReason,
+            },
+          });
+        }
 
         await this.auditLog.record(
           {
@@ -435,6 +457,55 @@ export class ProductsService {
           action: "PRODUCT_BRANCHES_UPDATED",
           entityType: "Product",
           entityId: productId,
+          oldValue: { branchIds: oldBranchIds },
+          newValue: { branchIds: dto.branchIds },
+          ipAddress: ctx.ipAddress,
+          userAgent: ctx.userAgent,
+        },
+        tx,
+      );
+
+      return tx.product.findUniqueOrThrow({ where: { id: productId }, include: PRODUCT_DETAIL_INCLUDE });
+    });
+  }
+
+  /** Same replace-set pattern as assignBranches, but per-variant — see
+   * BranchProductVariant's own schema comment for why this exists
+   * separately from product-level branch assignment. */
+  async assignVariantBranches(
+    productId: string,
+    variantId: string,
+    dto: AssignVariantBranchesDto,
+    actor: AuthenticatedStaff,
+    ctx: RequestContext,
+  ) {
+    await this.getVariantOrThrow(productId, variantId);
+
+    const branches = await this.prisma.branch.findMany({ where: { id: { in: dto.branchIds } } });
+    const resolvedIds = new Set(branches.map((b) => b.id));
+    const missing = dto.branchIds.filter((id) => !resolvedIds.has(id));
+    if (missing.length > 0) {
+      throw new ValidationError(
+        "One or more branches do not exist",
+        missing.map((id) => ({ field: "branchIds", message: `Unknown branch: ${id}` })),
+      );
+    }
+
+    const existingAssignments = await this.prisma.branchProductVariant.findMany({ where: { productVariantId: variantId } });
+    const oldBranchIds = existingAssignments.map((bv) => bv.branchId);
+
+    return this.prisma.$transaction(async (tx) => {
+      await tx.branchProductVariant.deleteMany({ where: { productVariantId: variantId } });
+      await tx.branchProductVariant.createMany({
+        data: dto.branchIds.map((branchId) => ({ productVariantId: variantId, branchId })),
+      });
+
+      await this.auditLog.record(
+        {
+          actor,
+          action: "PRODUCT_VARIANT_BRANCHES_UPDATED",
+          entityType: "ProductVariant",
+          entityId: variantId,
           oldValue: { branchIds: oldBranchIds },
           newValue: { branchIds: dto.branchIds },
           ipAddress: ctx.ipAddress,

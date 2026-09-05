@@ -134,7 +134,21 @@ export class OrdersService {
     }
 
     const discountInPaise = 0; // no coupon engine yet — see docs/architecture/decisions.md
-    const taxInPaise = 0; // tax computation not implemented yet — see docs/architecture/decisions.md
+
+    // Real GST, not the previous hardcoded 0 — see ProductVariant.gstRatePercent's
+    // own schema comment. cartState.issues.length === 0 (checked above)
+    // guarantees every line's unitPriceInPaise is a real number here (a
+    // TBD-priced line always surfaces a PRICE_NOT_SET issue), so this
+    // arithmetic is safe despite the field's `number | null` type.
+    const itemTaxes = cartState.cart!.items.map((item) => {
+      const lineSubtotalInPaise = item.unitPriceInPaise! * item.quantity;
+      const gstRate = item.variant.gstRatePercent;
+      const taxInPaise = gstRate ? Math.round(lineSubtotalInPaise * (gstRate.toNumber() / 100)) : 0;
+      return { cartItemId: item.id, taxInPaise };
+    });
+    const taxInPaise = itemTaxes.reduce((sum, t) => sum + t.taxInPaise, 0);
+    const taxByCartItemId = new Map(itemTaxes.map((t) => [t.cartItemId, t.taxInPaise]));
+
     const totalInPaise = cartState.subtotalInPaise - discountInPaise + deliveryFeeInPaise + taxInPaise;
 
     // Phase 7 (ADR-015/017): offline methods (COD/Pay-at-Store) have no
@@ -165,28 +179,30 @@ export class OrdersService {
             totalInPaise,
             idempotencyKey,
             items: {
-              create: cartState.cart!.items.map((item) => ({
-                productId: item.product.id,
-                variantId: item.variant.id,
-                productNameSnapshot: item.product.name,
-                variantNameSnapshot: item.variant.name,
-                quantity: item.quantity,
-                unitPriceInPaise: item.unitPriceInPaise,
-                discountInPaise: 0,
-                taxInPaise: 0,
-                // Per-line total (unit price × quantity) — discount/tax
-                // are 0 today so this is unambiguous; once coupons/tax
-                // land, finalPriceInPaise = (unitPrice - discount + tax) × quantity.
-                finalPriceInPaise: item.unitPriceInPaise * item.quantity,
-                specialInstructions: item.specialInstructions,
-                addons: {
-                  create: item.addons.map((addon) => ({
-                    addonId: addon.id,
-                    addonNameSnapshot: addon.name,
-                    priceInPaiseSnapshot: addon.priceInPaise,
-                  })),
-                },
-              })),
+              create: cartState.cart!.items.map((item) => {
+                const lineTaxInPaise = taxByCartItemId.get(item.id) ?? 0;
+                return {
+                  productId: item.product.id,
+                  variantId: item.variant.id,
+                  productNameSnapshot: item.product.name,
+                  variantNameSnapshot: item.variant.name,
+                  quantity: item.quantity,
+                  unitPriceInPaise: item.unitPriceInPaise!,
+                  discountInPaise: 0,
+                  taxInPaise: lineTaxInPaise,
+                  // discount is 0 today (no coupon engine yet) — once it
+                  // lands, finalPriceInPaise = (unitPrice - discount) × quantity + tax.
+                  finalPriceInPaise: item.unitPriceInPaise! * item.quantity + lineTaxInPaise,
+                  specialInstructions: item.specialInstructions,
+                  addons: {
+                    create: item.addons.map((addon) => ({
+                      addonId: addon.id,
+                      addonNameSnapshot: addon.name,
+                      priceInPaiseSnapshot: addon.priceInPaise,
+                    })),
+                  },
+                };
+              }),
             },
             payments: {
               create: {

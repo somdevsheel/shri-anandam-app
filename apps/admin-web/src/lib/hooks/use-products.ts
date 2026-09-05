@@ -130,3 +130,12 @@ export function useAssignProductBranches(productId: string) {
     onSuccess: (product) => queryClient.setQueryData(queryKeys.product(productId), product),
   });
 }
+
+export function useAssignVariantBranches(productId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ variantId, branchIds }: { variantId: string; branchIds: string[] }) =>
+      apiRequest<Product>(`/products/${productId}/variants/${variantId}/branches`, { method: "PATCH", body: { branchIds } }),
+    onSuccess: (product) => queryClient.setQueryData(queryKeys.product(productId), product),
+  });
+}

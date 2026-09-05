@@ -63,25 +63,75 @@ export type BrowseCatalogProductsQueryDto = z.infer<typeof browseCatalogProducts
 // Variant
 // ---------------------------------------------------------------------------
 
-export const createProductVariantSchema = z.object({
-  name: z.string().trim().min(1).max(100),
-  sku: z.string().trim().toUpperCase().min(1).max(64),
-  weightGrams: z.number().positive().max(1_000_000).optional(),
-  priceInPaise: z.number().int().positive(),
-  compareAtPriceInPaise: z.number().int().positive().optional(),
-});
+/** Selling unit — see ProductVariant.unit's own schema comment for why
+ * this is separate from inventory.schema.ts's inventoryUnitSchema. */
+export const productUnitSchema = z.enum([
+  "PIECE",
+  "PLATE",
+  "HALF_PLATE",
+  "FULL_PLATE",
+  "GRAM",
+  "KILOGRAM",
+  "ML",
+  "LITRE",
+  "BOX",
+  "PACKET",
+]);
+export type ProductUnit = z.infer<typeof productUnitSchema>;
+
+export const createProductVariantSchema = z
+  .object({
+    name: z.string().trim().min(1).max(100),
+    sku: z.string().trim().toUpperCase().min(1).max(64),
+    weightGrams: z.number().positive().max(1_000_000).optional(),
+    unit: productUnitSchema.default("PIECE"),
+    quantity: z.number().positive().max(1_000_000).default(1),
+    /** Omit (or null) to leave the price "TBD" — see ProductVariant.priceInPaise's
+     * own schema comment. Never invent a price; leave it unset until
+     * the real one is known. */
+    priceInPaise: z.number().int().positive().optional(),
+    compareAtPriceInPaise: z.number().int().positive().optional(),
+    /** GST rate as a percentage, e.g. 5 for 5%. */
+    gstRatePercent: z.number().min(0).max(100).optional(),
+    minOrderQuantity: z.number().int().positive().default(1),
+    maxOrderQuantity: z.number().int().positive().optional(),
+  })
+  .refine((v) => v.maxOrderQuantity === undefined || v.maxOrderQuantity >= v.minOrderQuantity, {
+    message: "maxOrderQuantity must be greater than or equal to minOrderQuantity",
+    path: ["maxOrderQuantity"],
+  });
 export type CreateProductVariantDto = z.infer<typeof createProductVariantSchema>;
 
-export const updateProductVariantSchema = z.object({
-  name: z.string().trim().min(1).max(100).optional(),
-  weightGrams: z.number().positive().max(1_000_000).nullable().optional(),
-  priceInPaise: z.number().int().positive().optional(),
-  compareAtPriceInPaise: z.number().int().positive().nullable().optional(),
-  isActive: z.boolean().optional(),
-  /** Optional note recorded on the PriceHistory/audit-log entry when priceInPaise changes. */
-  priceChangeReason: z.string().trim().max(300).optional(),
-});
+export const updateProductVariantSchema = z
+  .object({
+    name: z.string().trim().min(1).max(100).optional(),
+    weightGrams: z.number().positive().max(1_000_000).nullable().optional(),
+    unit: productUnitSchema.optional(),
+    quantity: z.number().positive().max(1_000_000).optional(),
+    /** Explicit null clears the price back to "TBD"; omit to leave unchanged. */
+    priceInPaise: z.number().int().positive().nullable().optional(),
+    compareAtPriceInPaise: z.number().int().positive().nullable().optional(),
+    gstRatePercent: z.number().min(0).max(100).nullable().optional(),
+    minOrderQuantity: z.number().int().positive().optional(),
+    maxOrderQuantity: z.number().int().positive().nullable().optional(),
+    isActive: z.boolean().optional(),
+    /** Optional note recorded on the PriceHistory/audit-log entry when priceInPaise changes. */
+    priceChangeReason: z.string().trim().max(300).optional(),
+  })
+  .refine(
+    (v) => v.maxOrderQuantity == null || v.minOrderQuantity == null || v.maxOrderQuantity >= v.minOrderQuantity,
+    { message: "maxOrderQuantity must be greater than or equal to minOrderQuantity", path: ["maxOrderQuantity"] },
+  );
 export type UpdateProductVariantDto = z.infer<typeof updateProductVariantSchema>;
+
+// ---------------------------------------------------------------------------
+// Variant <-> Branch assignment (replace-set pattern, mirrors assignProductBranchesSchema)
+// ---------------------------------------------------------------------------
+
+export const assignVariantBranchesSchema = z.object({
+  branchIds: z.array(uuidSchema),
+});
+export type AssignVariantBranchesDto = z.infer<typeof assignVariantBranchesSchema>;
 
 // ---------------------------------------------------------------------------
 // Image

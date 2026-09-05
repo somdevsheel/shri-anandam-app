@@ -4,6 +4,7 @@ import { useState } from "react";
 import { updateProductSchema } from "@shri-anandam/validation";
 import { useUpdateProduct } from "@/lib/hooks/use-products";
 import { useCategories } from "@/lib/hooks/use-catalog-support";
+import { orderedCategoriesWithDepth } from "@/lib/category-tree";
 import { ApiError } from "@/lib/api-client";
 import { Button } from "@/components/ui/Button";
 import { Card, CardHeader } from "@/components/ui/Card";
@@ -21,6 +22,7 @@ import type { Product } from "@/lib/types";
  */
 export function ProductDetailsForm({ product }: { product: Product }) {
   const { data: categories } = useCategories();
+  const orderedCategories = orderedCategoriesWithDepth(categories?.items ?? []);
   const updateProduct = useUpdateProduct(product.id);
 
   const [name, setName] = useState(product.name);
@@ -57,9 +59,9 @@ export function ProductDetailsForm({ product }: { product: Product }) {
       <div className="flex flex-col gap-4">
         <Input label="Name" value={name} onChange={(e) => setName(e.target.value)} />
         <Select label="Category" value={categoryId} onChange={(e) => setCategoryId(e.target.value)}>
-          {categories?.items.map((c) => (
+          {orderedCategories.map((c) => (
             <option key={c.id} value={c.id}>
-              {c.name}
+              {c.label}
             </option>
           ))}
         </Select>

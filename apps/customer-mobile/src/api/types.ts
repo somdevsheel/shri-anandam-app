@@ -18,13 +18,31 @@ export interface Category {
   sortOrder: number;
 }
 
+export type ProductUnit =
+  | "PIECE"
+  | "PLATE"
+  | "HALF_PLATE"
+  | "FULL_PLATE"
+  | "GRAM"
+  | "KILOGRAM"
+  | "ML"
+  | "LITRE"
+  | "BOX"
+  | "PACKET";
+
 export interface ProductVariant {
   id: string;
   name: string;
   sku: string;
   weightGrams: string | null;
-  priceInPaise: Paise;
+  unit: ProductUnit;
+  quantity: string;
+  /** null = "TBD" — no real price set yet. Never orderable while null;
+   * the API itself refuses to add a null-priced variant to any cart. */
+  priceInPaise: Paise | null;
   compareAtPriceInPaise: Paise | null;
+  minOrderQuantity: number;
+  maxOrderQuantity: number | null;
   isActive: boolean;
 }
 

@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { createProductSchema } from "@shri-anandam/validation";
 import { useCreateProduct } from "@/lib/hooks/use-products";
 import { useCategories } from "@/lib/hooks/use-catalog-support";
+import { orderedCategoriesWithDepth } from "@/lib/category-tree";
 import { ApiError } from "@/lib/api-client";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
@@ -14,6 +15,7 @@ import { ErrorBlock } from "@/components/ui/Feedback";
 export default function NewProductPage() {
   const router = useRouter();
   const { data: categories } = useCategories();
+  const orderedCategories = orderedCategoriesWithDepth(categories?.items ?? []);
   const createProduct = useCreateProduct();
 
   const [name, setName] = useState("");
@@ -53,9 +55,9 @@ export default function NewProductPage() {
         <Input label="Name" value={name} onChange={(e) => setName(e.target.value)} />
         <Select label="Category" value={categoryId} onChange={(e) => setCategoryId(e.target.value)}>
           <option value="">Select a category</option>
-          {categories?.items.map((c) => (
+          {orderedCategories.map((c) => (
             <option key={c.id} value={c.id}>
-              {c.name}
+              {c.label}
             </option>
           ))}
         </Select>

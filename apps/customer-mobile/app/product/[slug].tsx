@@ -31,6 +31,19 @@ export default function ProductDetailScreen() {
   const selectedVariant: ProductVariant | undefined =
     activeVariants.find((v) => v.id === selectedVariantId) ?? activeVariants[0];
   const availableBranch = product?.branchProducts[0];
+  const isPriceTbd = selectedVariant !== undefined && selectedVariant.priceInPaise === null;
+
+  // Re-clamp quantity to the newly-selected variant's own min/max
+  // whenever the selection changes — a variant can have a different
+  // range than the one just switched away from.
+  useEffect(() => {
+    if (!selectedVariant) return;
+    setQuantity((q) => {
+      const min = selectedVariant.minOrderQuantity;
+      const max = selectedVariant.maxOrderQuantity ?? 99;
+      return Math.min(max, Math.max(min, q));
+    });
+  }, [selectedVariant]);
 
   if (isLoading) return <LoadingView />;
   if (!product) {
@@ -49,11 +62,11 @@ export default function ProductDetailScreen() {
   const addonsTotal = product.productAddons
     .filter((pa) => selectedAddonIds.has(pa.addon.id))
     .reduce((sum, pa) => sum + pa.addon.priceInPaise, 0);
-  const unitPrice = (selectedVariant?.priceInPaise ?? 0) + addonsTotal;
-  const totalPrice = unitPrice * quantity;
+  const unitPrice = selectedVariant?.priceInPaise == null ? null : selectedVariant.priceInPaise + addonsTotal;
+  const totalPrice = unitPrice === null ? null : unitPrice * quantity;
 
   const handleAddToCart = () => {
-    if (!selectedVariant || !availableBranch) return;
+    if (!selectedVariant || !availableBranch || isPriceTbd) return;
     addToCart.mutate(
       {
         branchId: availableBranch.branchId,
@@ -104,7 +117,7 @@ export default function ProductDetailScreen() {
                   {variant.name}
                 </Text>
                 <Text style={[styles.optionPrice, variant.id === selectedVariant?.id && styles.optionLabelSelected]}>
-                  {formatInr(variant.priceInPaise)}
+                  {variant.priceInPaise === null ? "Price coming soon" : formatInr(variant.priceInPaise)}
                 </Text>
               </Pressable>
             ))}
@@ -143,7 +156,7 @@ export default function ProductDetailScreen() {
         <Pressable
           accessibilityRole="button"
           accessibilityLabel="Decrease quantity"
-          onPress={() => setQuantity((q) => Math.max(1, q - 1))}
+          onPress={() => setQuantity((q) => Math.max(selectedVariant?.minOrderQuantity ?? 1, q - 1))}
           style={styles.stepperButton}
         >
           <Ionicons name="remove" size={18} color={colors.primary} />
@@ -152,22 +165,29 @@ export default function ProductDetailScreen() {
         <Pressable
           accessibilityRole="button"
           accessibilityLabel="Increase quantity"
-          onPress={() => setQuantity((q) => Math.min(99, q + 1))}
+          onPress={() => setQuantity((q) => Math.min(selectedVariant?.maxOrderQuantity ?? 99, q + 1))}
           style={styles.stepperButton}
         >
           <Ionicons name="add" size={18} color={colors.primary} />
         </Pressable>
       </View>
+      {selectedVariant && (selectedVariant.minOrderQuantity > 1 || selectedVariant.maxOrderQuantity) ? (
+        <Text style={styles.quantityHint}>
+          {selectedVariant.minOrderQuantity > 1 ? `Min ${selectedVariant.minOrderQuantity}` : ""}
+          {selectedVariant.minOrderQuantity > 1 && selectedVariant.maxOrderQuantity ? " · " : ""}
+          {selectedVariant.maxOrderQuantity ? `Max ${selectedVariant.maxOrderQuantity}` : ""}
+        </Text>
+      ) : null}
 
       <View style={styles.footer}>
         <View>
           <Text style={styles.totalLabel}>Total</Text>
-          <Text style={styles.totalValue}>{formatInr(totalPrice)}</Text>
+          <Text style={styles.totalValue}>{totalPrice === null ? "TBD" : formatInr(totalPrice)}</Text>
         </View>
         <Button
-          label={availableBranch ? "Add to Cart" : "Not available"}
+          label={!availableBranch ? "Not available" : isPriceTbd ? "Price coming soon" : "Add to Cart"}
           onPress={handleAddToCart}
-          disabled={!selectedVariant || !availableBranch}
+          disabled={!selectedVariant || !availableBranch || isPriceTbd}
           loading={addToCart.isPending}
           style={styles.addButton}
           testID="add-to-cart-button"
@@ -211,6 +231,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   quantityText: { ...typography.h3, color: colors.text, minWidth: 24, textAlign: "center" },
+  quantityHint: { ...typography.caption, color: colors.textMuted, marginTop: spacing.xs },
   footer: {
     flexDirection: "row",
     alignItems: "center",

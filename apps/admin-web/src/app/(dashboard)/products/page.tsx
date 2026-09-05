@@ -89,7 +89,10 @@ export default function ProductsPage() {
               </thead>
               <tbody>
                 {data.items.map((product) => {
-                  const prices = product.variants.map((v) => v.priceInPaise);
+                  // Variants with a "TBD" (null) price don't count toward
+                  // the range — a product where every variant is still
+                  // unpriced shows "—", not "₹0".
+                  const prices = product.variants.map((v) => v.priceInPaise).filter((p): p is number => p !== null);
                   const min = prices.length ? Math.min(...prices) : 0;
                   const max = prices.length ? Math.max(...prices) : 0;
                   return (
