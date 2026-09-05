@@ -28,6 +28,11 @@ export const envSchema = z.object({
   OTP_TTL_SECONDS: z.coerce.number().int().positive().default(300),
   OTP_RESEND_COOLDOWN_SECONDS: z.coerce.number().int().positive().default(30),
   OTP_MAX_ATTEMPTS: z.coerce.number().int().positive().default(5),
+  /** Temporary escape hatch for while no real SMS provider is wired up
+   * (see AuthModule's SMS_PROVIDER binding) — see .env.example's own
+   * comment for the full explanation and the security tradeoff. Unset
+   * in any environment once a real provider is configured. */
+  OTP_BYPASS_CODE: z.string().optional(),
 
   SMS_PROVIDER: z.string().default("msg91"),
   SMS_API_KEY: z.string().optional(),

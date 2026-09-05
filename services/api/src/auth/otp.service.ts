@@ -1,4 +1,4 @@
-import { Inject, Injectable } from "@nestjs/common";
+import { Inject, Injectable, Logger } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import { createHash, randomInt } from "node:crypto";
 import { RedisService } from "../redis/redis.service";
@@ -24,10 +24,12 @@ interface OtpRecord {
  */
 @Injectable()
 export class OtpService {
+  private readonly logger = new Logger(OtpService.name);
   private readonly otpLength: number;
   private readonly ttlSeconds: number;
   private readonly resendCooldownSeconds: number;
   private readonly maxAttempts: number;
+  private readonly bypassCode: string | undefined;
 
   constructor(
     private readonly redis: RedisService,
@@ -38,6 +40,13 @@ export class OtpService {
     this.ttlSeconds = this.config.get<number>("OTP_TTL_SECONDS", 300);
     this.resendCooldownSeconds = this.config.get<number>("OTP_RESEND_COOLDOWN_SECONDS", 30);
     this.maxAttempts = this.config.get<number>("OTP_MAX_ATTEMPTS", 5);
+    this.bypassCode = this.config.get<string>("OTP_BYPASS_CODE") || undefined;
+
+    if (this.bypassCode) {
+      this.logger.warn(
+        `OTP_BYPASS_CODE is set — any phone number can log in with this fixed code, no real OTP verification happens. This must be unset once a real SMS provider is configured (see .env.example).`,
+      );
+    }
   }
 
   private otpKey(mobileNumber: string): string {
@@ -63,10 +72,27 @@ export class OtpService {
     await this.redis.setWithTtl(this.otpKey(mobileNumber), JSON.stringify(record), this.ttlSeconds);
     await this.redis.setWithTtl(this.cooldownKey(mobileNumber), "1", this.resendCooldownSeconds);
 
+    if (this.bypassCode) {
+      // Skip the real provider entirely — ConsoleSmsProvider (the only
+      // one ever actually wired up, see AuthModule) throws by design in
+      // production, and this path exists specifically for when no real
+      // provider is configured yet. The real generated OTP is still
+      // logged here (in addition to OTP_BYPASS_CODE itself working in
+      // verifyOtp), so either one lets you in.
+      this.logger.warn(`OTP bypass active — real OTP for ${mobileNumber} is ${otp} (or use OTP_BYPASS_CODE)`);
+      return;
+    }
+
     await this.smsProvider.sendOtp(mobileNumber, otp);
   }
 
   async verifyOtp(mobileNumber: string, otp: string): Promise<boolean> {
+    if (this.bypassCode && otp === this.bypassCode) {
+      this.logger.warn(`OTP bypass code used to verify ${mobileNumber} — no real OTP was checked`);
+      await this.redis.del(this.otpKey(mobileNumber));
+      return true;
+    }
+
     const raw = await this.redis.get(this.otpKey(mobileNumber));
     if (!raw) {
       throw new AppError(ErrorCode.VALIDATION_ERROR, "OTP expired or not requested", HttpStatus.BAD_REQUEST);
