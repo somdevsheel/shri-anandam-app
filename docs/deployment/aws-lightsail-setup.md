@@ -221,7 +221,18 @@ docker compose -f infrastructure/docker/docker-compose.prod.yml --env-file .env 
 ```bash
 pnpm install --frozen-lockfile
 
-# Prisma client + schema
+# Prisma client + schema — generate BEFORE deploy, always, even right
+# after a `pnpm install` that reported "Already up to date". pnpm skips
+# a package's lifecycle scripts (including @prisma/client's own
+# postinstall, which is what normally regenerates the client) when
+# nothing about that package's install state changed — it has no way to
+# know schema.prisma itself changed, so an unmodified lockfile silently
+# leaves a stale client in place regardless of how recent the schema
+# edit is. `prisma migrate deploy` itself never regenerates the client
+# either (it only applies SQL) — caught live redeploying a real schema
+# change: skipped this exact step once, and `prisma:seed` immediately
+# after failed with "Module '@prisma/client' has no exported member
+# 'ProductUnit'" (a type that schema change had just added).
 pnpm --filter @shri-anandam/api prisma:generate
 pnpm --filter @shri-anandam/api prisma:deploy   # applies migrations — never `prisma migrate dev` in production
 
