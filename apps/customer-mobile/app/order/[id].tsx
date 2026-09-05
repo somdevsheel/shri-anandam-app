@@ -133,7 +133,7 @@ export default function OrderDetailScreen() {
         {canCancel ? (
           <Button label="Cancel Order" variant="danger" onPress={handleCancel} loading={cancelOrder.isPending} style={styles.cancelButton} />
         ) : null}
-        <Button label="Back to Orders" variant="outline" onPress={() => router.replace("/(tabs)/orders")} style={styles.cancelButton} />
+        <Button label="Back to Orders" variant="outline" onPress={() => router.replace("/orders")} style={styles.cancelButton} />
       </ScrollView>
     </SafeAreaView>
   );

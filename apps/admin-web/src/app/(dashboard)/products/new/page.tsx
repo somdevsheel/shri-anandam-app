@@ -23,6 +23,7 @@ export default function NewProductPage() {
   const [description, setDescription] = useState("");
   const [tags, setTags] = useState("");
   const [isFeatured, setIsFeatured] = useState(false);
+  const [isVeg, setIsVeg] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   const handleSubmit = () => {
@@ -35,6 +36,7 @@ export default function NewProductPage() {
         .map((t) => t.trim())
         .filter(Boolean),
       isFeatured,
+      isVeg,
     });
     if (!result.success) {
       setError(result.error.issues[0]?.message ?? "Check the form for errors");
@@ -66,6 +68,10 @@ export default function NewProductPage() {
         <label className="flex items-center gap-2 text-sm text-text">
           <input type="checkbox" checked={isFeatured} onChange={(e) => setIsFeatured(e.target.checked)} className="size-4" />
           Featured product
+        </label>
+        <label className="flex items-center gap-2 text-sm text-text">
+          <input type="checkbox" checked={isVeg} onChange={(e) => setIsVeg(e.target.checked)} className="size-4" />
+          Vegetarian
         </label>
 
         {error ? <ErrorBlock message={error} /> : null}

@@ -18,6 +18,14 @@ export interface Category {
   sortOrder: number;
 }
 
+/** GET /catalog/branches — a narrow public projection, not the full staff-only Branch record. */
+export interface PublicBranch {
+  id: string;
+  name: string;
+  phone: string | null;
+  address: string;
+}
+
 export type ProductUnit =
   | "PIECE"
   | "PLATE"
@@ -73,6 +81,7 @@ export interface Product {
   tags: string[];
   isActive: boolean;
   isFeatured: boolean;
+  isVeg: boolean;
   category: Category;
   variants: ProductVariant[];
   images: ProductImage[];
@@ -116,6 +125,10 @@ export interface CartResponse {
   itemCount: number;
   issues: CartLineIssue[];
 }
+
+export type CouponPreview =
+  | { valid: true; coupon: { id: string; code: string }; discountInPaise: Paise }
+  | { valid: false; message: string };
 
 export interface CustomerAddress {
   id: string;
@@ -212,4 +225,17 @@ export interface Order {
   addressSnapshot: OrderAddressSnapshot | null;
   statusHistory: OrderStatusHistoryEntry[];
   payments: OrderPayment[];
+}
+
+export interface AppNotification {
+  id: string;
+  category: string;
+  type: string;
+  title: string;
+  body: string;
+  status: "PENDING" | "SENT" | "DELIVERED" | "READ" | "FAILED";
+  entityType: string | null;
+  entityId: string | null;
+  readAt: string | null;
+  createdAt: string;
 }

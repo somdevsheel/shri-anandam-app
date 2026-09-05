@@ -30,6 +30,7 @@ export function ProductDetailsForm({ product }: { product: Product }) {
   const [description, setDescription] = useState(product.description ?? "");
   const [tags, setTags] = useState(product.tags.join(", "));
   const [isFeatured, setIsFeatured] = useState(product.isFeatured);
+  const [isVeg, setIsVeg] = useState(product.isVeg);
   const [formError, setFormError] = useState<string | null>(null);
 
   const handleSave = () => {
@@ -42,6 +43,7 @@ export function ProductDetailsForm({ product }: { product: Product }) {
         .map((t) => t.trim())
         .filter(Boolean),
       isFeatured,
+      isVeg,
     });
     if (!result.success) {
       setFormError(result.error.issues[0]?.message ?? "Check the form for errors");
@@ -70,6 +72,10 @@ export function ProductDetailsForm({ product }: { product: Product }) {
         <label className="flex items-center gap-2 text-sm text-text">
           <input type="checkbox" checked={isFeatured} onChange={(e) => setIsFeatured(e.target.checked)} className="size-4" />
           Featured product
+        </label>
+        <label className="flex items-center gap-2 text-sm text-text">
+          <input type="checkbox" checked={isVeg} onChange={(e) => setIsVeg(e.target.checked)} className="size-4" />
+          Vegetarian
         </label>
         {formError ? <ErrorBlock message={formError} /> : null}
         <Button onClick={handleSave} loading={updateProduct.isPending} className="self-start">

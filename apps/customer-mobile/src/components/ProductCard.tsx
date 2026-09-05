@@ -5,6 +5,7 @@ import { colors, fonts, radius, spacing, typography } from "@/theme/theme";
 import { useAddCartItem } from "@/api/hooks/use-cart";
 import { ApiError } from "@/api/client";
 import { PriceTag } from "./ui/PriceTag";
+import { VegIndicator } from "./ui/VegIndicator";
 import type { Product } from "@/api/types";
 
 interface ProductCardProps {
@@ -55,6 +56,9 @@ export function ProductCard({ product }: ProductCardProps) {
           ) : (
             <View style={[styles.image, styles.imagePlaceholder]} />
           )}
+          <View style={styles.vegBadge}>
+            <VegIndicator isVeg={product.isVeg} />
+          </View>
         </View>
         <Text style={styles.name} numberOfLines={2}>
           {product.name}
@@ -105,6 +109,7 @@ const styles = StyleSheet.create({
     overflow: "hidden",
     marginBottom: spacing.sm,
   },
+  vegBadge: { position: "absolute", top: 6, right: 6 },
   image: { width: "100%", height: "100%" },
   imagePlaceholder: { backgroundColor: colors.border },
   name: { ...typography.bodyBold, color: colors.text, marginBottom: spacing.xs, minHeight: 38 },

@@ -109,6 +109,7 @@ export class ProductsService {
           nutritionalInfo: dto.nutritionalInfo,
           tags: dto.tags,
           isFeatured: dto.isFeatured,
+          isVeg: dto.isVeg,
         },
         include: PRODUCT_DETAIL_INCLUDE,
       });
@@ -161,6 +162,7 @@ export class ProductsService {
           tags: dto.tags,
           isActive: dto.isActive,
           isFeatured: dto.isFeatured,
+          isVeg: dto.isVeg,
         },
         include: PRODUCT_DETAIL_INCLUDE,
       });

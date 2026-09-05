@@ -38,6 +38,21 @@ export class CatalogService {
     });
   }
 
+  /**
+   * Public branch contact info for the customer app's Help & Support
+   * screen — deliberately a narrow projection (name/phone/address only),
+   * not the full Branch row `/branches` (staff-only, BRANCH_READ) returns,
+   * which also carries organizationId and other internal fields a
+   * customer has no reason to see.
+   */
+  listBranches() {
+    return this.prisma.branch.findMany({
+      where: { isActive: true },
+      select: { id: true, name: true, phone: true, address: true },
+      orderBy: { name: "asc" },
+    });
+  }
+
   async listProducts(query: BrowseCatalogProductsQueryDto) {
     let categoryId = query.categoryId;
     if (!categoryId && query.categorySlug) {

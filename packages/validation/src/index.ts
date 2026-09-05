@@ -11,6 +11,7 @@ export * from "./addon.schema";
 export * from "./inventory.schema";
 export * from "./customer.schema";
 export * from "./cart.schema";
+export * from "./coupon.schema";
 export * from "./order.schema";
 export * from "./payment.schema";
 export * from "./device.schema";

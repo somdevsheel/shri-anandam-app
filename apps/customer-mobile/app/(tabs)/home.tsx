@@ -28,7 +28,7 @@ export default function HomeScreen() {
 
   const submitSearch = () => {
     if (searchText.trim().length === 0) return;
-    router.push({ pathname: "/category/all", params: { search: searchText.trim() } });
+    router.push({ pathname: "/(tabs)/search", params: { q: searchText.trim() } });
   };
 
   const featured = featuredQuery.data?.pages.flatMap((p) => p.items) ?? [];

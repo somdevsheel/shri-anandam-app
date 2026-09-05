@@ -27,6 +27,7 @@ import { CatalogModule } from "./catalog/catalog.module";
 import { InventoryModule } from "./inventory/inventory.module";
 import { CustomersModule } from "./customers/customers.module";
 import { CartModule } from "./cart/cart.module";
+import { CouponsModule } from "./coupons/coupons.module";
 import { OrdersModule } from "./orders/orders.module";
 import { PaymentsModule } from "./payments/payments.module";
 import { DevicesModule } from "./devices/devices.module";
@@ -92,6 +93,7 @@ import { PermissionsGuard } from "./common/guards/permissions.guard";
     InventoryModule,
     CustomersModule,
     CartModule,
+    CouponsModule,
     OrdersModule,
     PaymentsModule,
     DevicesModule,

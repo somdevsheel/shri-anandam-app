@@ -11,6 +11,7 @@ export const NAV_ITEMS: NavItem[] = [
   { href: "/", label: "Dashboard", permission: null },
   { href: "/orders", label: "Orders", permission: Permission.ORDER_READ },
   { href: "/products", label: "Products", permission: Permission.PRODUCT_READ },
+  { href: "/coupons", label: "Coupons", permission: Permission.COUPON_READ },
   { href: "/inventory", label: "Inventory", permission: Permission.INVENTORY_READ },
   { href: "/customers", label: "Customers", permission: Permission.CUSTOMER_READ },
   { href: "/staff", label: "Staff", permission: Permission.STAFF_READ },

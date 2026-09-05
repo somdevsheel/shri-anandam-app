@@ -52,12 +52,17 @@ export default function RootLayout() {
           <Stack.Screen name="checkout" options={{ headerShown: true, title: "Checkout" }} />
           <Stack.Screen name="order-success/[id]" options={{ headerShown: false, gestureEnabled: false }} />
           <Stack.Screen name="order/[id]" options={{ headerShown: true, title: "Order" }} />
+          <Stack.Screen name="orders" options={{ headerShown: true, title: "Your Orders" }} />
           <Stack.Screen name="category/[slug]" options={{ headerShown: true }} />
           <Stack.Screen name="addresses/index" options={{ headerShown: true, title: "Your addresses" }} />
           <Stack.Screen
             name="addresses/new"
             options={{ headerShown: true, title: "Add address", presentation: "modal" }}
           />
+          <Stack.Screen name="notifications" options={{ headerShown: true, title: "Notifications" }} />
+          <Stack.Screen name="help" options={{ headerShown: true, title: "Help & Support" }} />
+          <Stack.Screen name="legal/terms" options={{ headerShown: true, title: "Terms of Service" }} />
+          <Stack.Screen name="legal/privacy" options={{ headerShown: true, title: "Privacy Policy" }} />
         </Stack>
       </SafeAreaProvider>
     </QueryClientProvider>

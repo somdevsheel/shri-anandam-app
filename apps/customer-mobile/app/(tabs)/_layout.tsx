@@ -36,18 +36,18 @@ export default function TabsLayout() {
         }}
       />
       <Tabs.Screen
+        name="search"
+        options={{
+          title: "Search",
+          tabBarIcon: ({ color }) => <TabIcon name="search" color={color as string} />,
+        }}
+      />
+      <Tabs.Screen
         name="cart"
         options={{
           title: "Cart",
           tabBarBadge: itemCount > 0 ? itemCount : undefined,
           tabBarIcon: ({ color }) => <TabIcon name="basket" color={color as string} />,
-        }}
-      />
-      <Tabs.Screen
-        name="orders"
-        options={{
-          title: "Orders",
-          tabBarIcon: ({ color }) => <TabIcon name="receipt" color={color as string} />,
         }}
       />
       <Tabs.Screen

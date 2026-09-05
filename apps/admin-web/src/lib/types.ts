@@ -213,6 +213,7 @@ export interface Product {
   tags: string[];
   isActive: boolean;
   isFeatured: boolean;
+  isVeg: boolean;
   category: Category;
   variants: ProductVariant[];
   images: ProductImage[];
@@ -237,6 +238,23 @@ export interface Branch {
   isActive: boolean;
   latitude: number | null;
   longitude: number | null;
+}
+
+export interface Coupon {
+  id: string;
+  code: string;
+  type: "PERCENTAGE" | "FIXED";
+  value: number;
+  minOrderInPaise: Paise | null;
+  maxDiscountInPaise: Paise | null;
+  usageLimit: number | null;
+  perCustomerLimit: number | null;
+  isFirstOrderOnly: boolean;
+  branchId: string | null;
+  startsAt: string;
+  endsAt: string;
+  isActive: boolean;
+  createdAt: string;
 }
 
 // ---------------------------------------------------------------------------

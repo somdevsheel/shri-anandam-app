@@ -17,6 +17,7 @@ export const colors = {
   textMuted: "#7A6F68",
   border: "#EFE3D6",
   success: "#3D8B4C",
+  nonVeg: "#8B3A3A", // the brown/maroon square of the standard Indian veg/non-veg mark — green (success) is veg
   danger: "#C0392B",
   warning: "#B7791F",
   warningBackground: "#FBF0DD",

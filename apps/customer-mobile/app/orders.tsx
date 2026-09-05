@@ -12,6 +12,7 @@ import { colors, radius, spacing, typography } from "@/theme/theme";
 import { formatDateTime } from "@/lib/format";
 import type { Order } from "@/api/types";
 
+/** Moved from the tab bar to a plain stack screen (linked from Profile) when Search took its tab slot. */
 export default function OrdersScreen() {
   const { data, isLoading, error, refetch, isRefetching } = useOrders();
   useRealtimeOrders(() => void refetch());
@@ -19,9 +20,7 @@ export default function OrdersScreen() {
   if (isLoading) return <LoadingView />;
 
   return (
-    <SafeAreaView style={styles.container} edges={["top"]}>
-      <Text style={styles.title}>Your orders</Text>
-
+    <SafeAreaView style={styles.container} edges={["bottom"]}>
       {error ? (
         <EmptyState icon="alert-circle-outline" title="Couldn't load your orders" message="Pull down to try again." />
       ) : !data || data.items.length === 0 ? (
@@ -61,8 +60,7 @@ function OrderRow({ order }: { order: Order }) {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.background },
-  title: { ...typography.display, fontSize: 22, color: colors.text, paddingHorizontal: spacing.lg, paddingTop: spacing.sm, marginBottom: spacing.sm },
-  listContent: { padding: spacing.lg, paddingTop: 0, flexGrow: 1 },
+  listContent: { padding: spacing.lg, flexGrow: 1 },
   card: {
     backgroundColor: colors.surface,
     borderRadius: radius.md,

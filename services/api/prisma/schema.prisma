@@ -467,6 +467,11 @@ model Product {
   tags            String[] @default([])
   isActive        Boolean  @default(true)
   isFeatured      Boolean  @default(false)
+  /// Dietary indicator shown as the standard green/red square-dot mark in
+  /// the customer app. Defaults true since this is a predominantly-
+  /// vegetarian sweets shop — an admin sets it false per product rather
+  /// than every existing product needing a backfill to stay accurate.
+  isVeg           Boolean  @default(true)
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 

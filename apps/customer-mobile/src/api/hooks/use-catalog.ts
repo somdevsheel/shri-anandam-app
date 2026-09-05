@@ -1,13 +1,21 @@
 import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
 import { apiRequest } from "../client";
 import { queryKeys } from "../query-client";
-import type { Category, PaginatedResult, Product } from "../types";
+import type { Category, PaginatedResult, Product, PublicBranch } from "../types";
 
 export function useCategories() {
   return useQuery({
     queryKey: queryKeys.categories,
     queryFn: () => apiRequest<Category[]>("/catalog/categories", { skipAuth: true }),
     staleTime: 5 * 60_000, // categories change rarely — cache longer than the default
+  });
+}
+
+export function useBranches() {
+  return useQuery({
+    queryKey: queryKeys.branches,
+    queryFn: () => apiRequest<PublicBranch[]>("/catalog/branches", { skipAuth: true }),
+    staleTime: 5 * 60_000, // branch contact info changes rarely
   });
 }
 

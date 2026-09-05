@@ -8,6 +8,7 @@ import { TextField } from "@/components/ui/TextField";
 import { LoadingView } from "@/components/ui/LoadingView";
 import { useProfile, useUpdateProfile } from "@/api/hooks/use-customer";
 import { useLogout } from "@/api/hooks/use-auth";
+import { useNotifications } from "@/api/hooks/use-notifications";
 import { ApiError } from "@/api/client";
 import { colors, fonts, radius, spacing, typography } from "@/theme/theme";
 
@@ -21,6 +22,8 @@ export default function ProfileScreen() {
   const { data: profile, isLoading } = useProfile();
   const updateProfile = useUpdateProfile();
   const logout = useLogout();
+  const { data: notificationsData } = useNotifications();
+  const unreadCount = notificationsData?.items.filter((n) => !n.readAt).length ?? 0;
 
   const [name, setName] = useState<string | undefined>();
   const [email, setEmail] = useState<string | undefined>();
@@ -73,7 +76,22 @@ export default function ProfileScreen() {
         <View style={styles.linkGroup}>
           <ProfileRow icon="location-outline" label="Saved addresses" onPress={() => router.push("/addresses")} />
           <View style={styles.linkDivider} />
-          <ProfileRow icon="receipt-outline" label="Order history" onPress={() => router.push("/(tabs)/orders")} />
+          <ProfileRow icon="receipt-outline" label="Order history" onPress={() => router.push("/orders")} />
+          <View style={styles.linkDivider} />
+          <ProfileRow
+            icon="notifications-outline"
+            label="Notifications"
+            meta={unreadCount > 0 ? String(unreadCount) : undefined}
+            onPress={() => router.push("/notifications")}
+          />
+          <View style={styles.linkDivider} />
+          <ProfileRow icon="call-outline" label="Help & support" onPress={() => router.push("/help")} />
+        </View>
+
+        <View style={styles.linkGroup}>
+          <ProfileRow icon="document-text-outline" label="Terms of Service" onPress={() => router.push("/legal/terms")} />
+          <View style={styles.linkDivider} />
+          <ProfileRow icon="shield-checkmark-outline" label="Privacy Policy" onPress={() => router.push("/legal/privacy")} />
         </View>
 
         <Text style={styles.sectionTitle}>Edit details</Text>
@@ -96,11 +114,26 @@ export default function ProfileScreen() {
   );
 }
 
-function ProfileRow({ icon, label, onPress }: { icon: keyof typeof Ionicons.glyphMap; label: string; onPress: () => void }) {
+function ProfileRow({
+  icon,
+  label,
+  meta,
+  onPress,
+}: {
+  icon: keyof typeof Ionicons.glyphMap;
+  label: string;
+  meta?: string;
+  onPress: () => void;
+}) {
   return (
     <Pressable style={styles.linkRow} onPress={onPress} accessibilityRole="button">
       <Ionicons name={icon} size={19} color={colors.text} />
       <Text style={styles.linkText}>{label}</Text>
+      {meta ? (
+        <View style={styles.linkBadge}>
+          <Text style={styles.linkBadgeText}>{meta}</Text>
+        </View>
+      ) : null}
       <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
     </Pressable>
   );
@@ -136,6 +169,8 @@ const styles = StyleSheet.create({
     padding: spacing.md,
   },
   linkDivider: { height: 1, backgroundColor: colors.border },
+  linkBadge: { minWidth: 20, height: 20, borderRadius: radius.full, backgroundColor: colors.primary, alignItems: "center", justifyContent: "center", paddingHorizontal: 5 },
+  linkBadgeText: { fontFamily: fonts.sansBold, fontSize: 11, fontWeight: "700", color: colors.onPrimary },
   linkText: { ...typography.bodyBold, color: colors.text, flex: 1 },
   sectionTitle: {
     fontFamily: fonts.sansBold,

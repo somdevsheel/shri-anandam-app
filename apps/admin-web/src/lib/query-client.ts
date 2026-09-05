@@ -23,6 +23,7 @@ export const queryKeys = {
   categories: (params: Record<string, unknown>) => ["categories", params] as const,
   addons: (params: Record<string, unknown>) => ["addons", params] as const,
   branches: (params: Record<string, unknown>) => ["branches", params] as const,
+  coupons: (params: Record<string, unknown>) => ["coupons", params] as const,
   inventory: (params: Record<string, unknown>) => ["inventory", params] as const,
   inventoryTransactions: (id: string, params: Record<string, unknown>) => ["inventory-transactions", id, params] as const,
   customers: (params: Record<string, unknown>) => ["customers", params] as const,

@@ -25,6 +25,8 @@ export const createOrderSchema = z
     addressId: uuidSchema.optional(),
     scheduledFor: z.coerce.date().optional(),
     paymentMethod: checkoutPaymentMethodSchema,
+    /** Validated against the cart server-side by CouponsService.resolveForCart — never trusted as a pre-computed discount. */
+    couponCode: z.string().trim().min(1).max(20).optional(),
   })
   .superRefine((data, ctx) => {
     if (data.fulfillmentType === "DELIVERY" && !data.addressId) {

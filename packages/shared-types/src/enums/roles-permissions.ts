@@ -74,6 +74,17 @@ export const Permission = {
   BRANCH_UPDATE: "branch.update",
   BRANCH_DELETE: "branch.delete",
 
+  /**
+   * Coupons affect revenue directly (discount math applied at checkout),
+   * so they get their own permission rather than piggybacking on
+   * PRODUCT_* the way addons do — a role that can edit the menu
+   * shouldn't automatically be able to create discount codes.
+   */
+  COUPON_READ: "coupon.read",
+  COUPON_CREATE: "coupon.create",
+  COUPON_UPDATE: "coupon.update",
+  COUPON_DELETE: "coupon.delete",
+
   /** Edit which permissions a Role grants (role_permissions) — distinct from staff.update (editing one staff member's own roles/branches/profile). */
   ROLE_MANAGE: "role.manage",
 } as const;
@@ -114,6 +125,10 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<Role, Permission[]> = {
     Permission.BRANCH_READ,
     Permission.BRANCH_CREATE,
     Permission.BRANCH_UPDATE,
+    Permission.COUPON_READ,
+    Permission.COUPON_CREATE,
+    Permission.COUPON_UPDATE,
+    Permission.COUPON_DELETE,
   ],
   [Role.CASHIER]: [
     Permission.ORDER_READ,

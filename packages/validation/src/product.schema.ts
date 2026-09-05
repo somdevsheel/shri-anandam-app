@@ -16,6 +16,7 @@ export const createProductSchema = z.object({
   nutritionalInfo: z.record(z.string(), z.union([z.string(), z.number()])).optional(),
   tags: z.array(z.string().trim().toLowerCase().max(50)).max(30).default([]),
   isFeatured: z.boolean().default(false),
+  isVeg: z.boolean().default(true),
 });
 export type CreateProductDto = z.infer<typeof createProductSchema>;
 
@@ -29,6 +30,7 @@ export const updateProductSchema = z.object({
   tags: z.array(z.string().trim().toLowerCase().max(50)).max(30).optional(),
   isActive: z.boolean().optional(),
   isFeatured: z.boolean().optional(),
+  isVeg: z.boolean().optional(),
 });
 export type UpdateProductDto = z.infer<typeof updateProductSchema>;
 

@@ -15,6 +15,12 @@ export class CatalogController {
   }
 
   @Public()
+  @Get("branches")
+  listBranches() {
+    return this.catalog.listBranches();
+  }
+
+  @Public()
   @Get("products")
   listProducts(@Query(new ZodValidationPipe(browseCatalogProductsQuerySchema)) query: BrowseCatalogProductsQueryDto) {
     return this.catalog.listProducts(query);

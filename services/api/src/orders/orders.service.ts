@@ -15,6 +15,7 @@ import { AuditLogService } from "../audit/audit-log.service";
 import { OutboxService } from "../outbox/outbox.service";
 import { InventoryReservationService } from "../inventory/inventory-reservation.service";
 import { CartService } from "../cart/cart.service";
+import { CouponsService, type CouponResolution } from "../coupons/coupons.service";
 import { PaymentsService } from "../payments/payments.service";
 import { OrderNumberService } from "./order-number.service";
 import { DeliveryFeeService } from "./delivery-fee.service";
@@ -82,6 +83,7 @@ export class OrdersService {
     private readonly outbox: OutboxService,
     private readonly reservations: InventoryReservationService,
     private readonly cart: CartService,
+    private readonly coupons: CouponsService,
     private readonly payments: PaymentsService,
     private readonly orderNumbers: OrderNumberService,
     private readonly deliveryFee: DeliveryFeeService,
@@ -133,7 +135,18 @@ export class OrdersService {
       deliveryFeeInPaise = fee.deliveryFeeInPaise;
     }
 
-    const discountInPaise = 0; // no coupon engine yet — see docs/architecture/decisions.md
+    // Re-validated here independently of whatever the checkout screen's
+    // /coupons/preview call showed — a code can expire, hit its usage
+    // limit, or get deactivated in the gap between preview and submit.
+    let appliedCoupon: Extract<CouponResolution, { valid: true }> | null = null;
+    if (dto.couponCode) {
+      const resolution = await this.coupons.resolveForCart(customer.id, dto.couponCode, cartState);
+      if (!resolution.valid) {
+        throw new ValidationError(resolution.message, [{ field: "couponCode", message: resolution.message }]);
+      }
+      appliedCoupon = resolution;
+    }
+    const discountInPaise = appliedCoupon?.discountInPaise ?? 0;
 
     // Real GST, not the previous hardcoded 0 — see ProductVariant.gstRatePercent's
     // own schema comment. cartState.issues.length === 0 (checked above)
@@ -177,6 +190,7 @@ export class OrdersService {
             deliveryFeeInPaise,
             taxInPaise,
             totalInPaise,
+            couponId: appliedCoupon?.coupon.id,
             idempotencyKey,
             items: {
               create: cartState.cart!.items.map((item) => {
@@ -188,10 +202,15 @@ export class OrdersService {
                   variantNameSnapshot: item.variant.name,
                   quantity: item.quantity,
                   unitPriceInPaise: item.unitPriceInPaise!,
+                  // Coupon discount is applied at the order level
+                  // (Order.discountInPaise above), not allocated across
+                  // individual lines — OrderItem.discountInPaise stays 0
+                  // in v1. Splitting a cart-wide discount proportionally
+                  // across lines is a real product decision (by value?
+                  // by quantity? rounding remainder to which line?) this
+                  // pass doesn't make.
                   discountInPaise: 0,
                   taxInPaise: lineTaxInPaise,
-                  // discount is 0 today (no coupon engine yet) — once it
-                  // lands, finalPriceInPaise = (unitPrice - discount) × quantity + tax.
                   finalPriceInPaise: item.unitPriceInPaise! * item.quantity + lineTaxInPaise,
                   specialInstructions: item.specialInstructions,
                   addons: {
@@ -215,6 +234,17 @@ export class OrdersService {
           },
           include: ORDER_DETAIL_INCLUDE,
         });
+
+        if (appliedCoupon) {
+          await tx.couponUsage.create({
+            data: {
+              couponId: appliedCoupon.coupon.id,
+              customerId: customer.id,
+              orderId: order.id,
+              discountAppliedInPaise: appliedCoupon.discountInPaise,
+            },
+          });
+        }
 
         // Reserve stock for every inventory-tracked line, now that
         // order.id exists to attribute the hold to. If any line is

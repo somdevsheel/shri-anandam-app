@@ -11,6 +11,7 @@ import { LoadingView } from "@/components/ui/LoadingView";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Button } from "@/components/ui/Button";
 import { ApiError } from "@/api/client";
+import { VegIndicator } from "@/components/ui/VegIndicator";
 import { colors, fonts, radius, spacing, typography } from "@/theme/theme";
 import type { ProductVariant } from "@/api/types";
 
@@ -105,8 +106,15 @@ export default function ProductDetailScreen() {
         </View>
 
         <View style={styles.content}>
-          <Text style={styles.eyebrow}>{product.category.name}</Text>
-          <Text style={styles.name}>{product.name}</Text>
+          <View style={styles.titleRow}>
+            <View style={styles.titleColumn}>
+              <Text style={styles.eyebrow}>{product.category.name}</Text>
+              <Text style={styles.name}>{product.name}</Text>
+            </View>
+            <View style={styles.vegBadge}>
+              <VegIndicator isVeg={product.isVeg} size={18} />
+            </View>
+          </View>
           {product.description ? <Text style={styles.description}>{product.description}</Text> : null}
 
           {product.allergens.length > 0 ? (
@@ -240,6 +248,9 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   content: { padding: spacing.lg },
+  titleRow: { flexDirection: "row", alignItems: "flex-start", gap: spacing.sm },
+  titleColumn: { flex: 1, minWidth: 0 },
+  vegBadge: { marginTop: spacing.xs },
   eyebrow: { fontFamily: fonts.sansBold, fontSize: 10.5, fontWeight: "700", letterSpacing: 1.4, color: colors.primary, textTransform: "uppercase" },
   name: { ...typography.display, fontSize: 24, color: colors.text, marginTop: spacing.xs },
   description: { ...typography.body, color: colors.textMuted, marginTop: spacing.xs },

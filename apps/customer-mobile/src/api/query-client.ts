@@ -29,4 +29,6 @@ export const queryKeys = {
   addresses: ["addresses"] as const,
   orders: (params: Record<string, unknown>) => ["orders", params] as const,
   order: (id: string) => ["order", id] as const,
+  notifications: (params: Record<string, unknown>) => ["notifications", params] as const,
+  branches: ["branches"] as const,
 };
